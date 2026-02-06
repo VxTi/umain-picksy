@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { PencilIcon }               from 'lucide-react';
+import { useState }                 from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { TopBar } from "@/components/TopBar";
-import { Button } from "@/components/ui/button";
-import type { Photo } from '@/backend/commandStream';
+import { TopBar }                   from "@/components/TopBar";
+import { Button }                   from "@/components/ui/button";
+import type { Photo }               from '@/backend/commandStream';
 
 export interface ImageItem {
 	id: string;
@@ -60,6 +61,7 @@ function Gallery() {
 						onClick={handleEditClick}
 						disabled={selectedImages.length === 0}
 					>
+						<PencilIcon/>
 						Edit Selected
 					</Button>
 				</div>

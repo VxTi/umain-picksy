@@ -13,7 +13,7 @@ export const PhotoComponent: React.FC<ImageViewProps> = ({
   alt = "",
   brightness = 100,
   blur = 0,
-  saturation = 0,
+  saturation = 100,
 }) => {
     const filter = `brightness(${brightness}%) saturate(${saturation}%) blur(${blur}px)`;
   return (
@@ -21,8 +21,8 @@ export const PhotoComponent: React.FC<ImageViewProps> = ({
       src={src}
       alt={alt}
       style={{
-        maxHeight: "70%",
-        maxWidth: "70%",
+        maxHeight: "100%",
+        maxWidth: "100%",
         objectFit: "contain",
         filter
       }}

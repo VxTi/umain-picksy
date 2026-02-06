@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import { Card, CardContent }      from "@/components/ui/card";
+import { FolderIcon, ImagesIcon } from 'lucide-react';
+import { useNavigate }            from "react-router-dom";
 import type { Photo } from "./backend/commandStream";
 
 type PicksyViewProps = {
@@ -24,10 +25,11 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
           {/* Buttons */}
           <div className="flex flex-col gap-3 w-full">
             <Button size="lg" className="w-full" onClick={onSelectFolder}>
-              Select folder
+              <FolderIcon/> Select folder
             </Button>
 
             <Button size="lg" variant="outline" className="w-full" onClick={() => navigate("/gallery", { state: { photos } })}>
+              <ImagesIcon/>
               View Gallery
             </Button>
           </div>
