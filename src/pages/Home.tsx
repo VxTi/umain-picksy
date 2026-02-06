@@ -6,6 +6,7 @@ import {
   addPhotoToLibrary,
   analyzeImageMetadata,
 } from "@/lib/vision";
+import { clearLibrary } from "@/lib/library";
 import PicksyView from "../PicksyView";
 
 export default function Home() {
@@ -31,12 +32,21 @@ export default function Home() {
     }
   }, []);
 
+  const handleClearLibrary = useCallback(async () => {
+    try {
+      await clearLibrary();
+    } catch (error) {
+      console.error("Failed to clear library", error);
+    }
+  }, []);
+
   return (
     <main className="container">
       <PicksyView
         photos={photos}
         onSelectFolder={handleSelectFolder}
         onAddPhoto={handleAddPhoto}
+        onClearLibrary={handleClearLibrary}
       />
     </main>
   );

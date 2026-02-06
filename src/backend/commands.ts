@@ -19,6 +19,10 @@ export const CommandSchemas = {
     args: Schema.Struct({}),
     result: Schema.Array(PhotoSchema),
   },
+  clear_library: {
+    args: Schema.Struct({}),
+    result: Schema.Struct({}),
+  },
 } as const satisfies Record<string, CommandEntry>;
 
 export type Command = keyof typeof CommandSchemas;
