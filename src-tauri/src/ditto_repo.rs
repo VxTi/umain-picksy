@@ -185,7 +185,7 @@ impl DittoRepository {
 
         ditto.update_transport_config(|transport_config| {
             transport_config.enable_all_peer_to_peer();
-            transport_config.global.sync_group = 0; // all users in 1 big pool!
+            transport_config.global.sync_group = 1; // all users in 1 big pool!
             transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe

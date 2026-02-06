@@ -1,6 +1,6 @@
 mod ditto_repo;
 
-use ditto_repo::{AppState, DittoRepository, PhotoPayload};
+use ditto_repo::{AppState, DittoRepository};
 use tauri::{Manager, State};
 
 mod commands;
@@ -10,6 +10,7 @@ use commands::photo_library_commands::{
     analyze_image_metadata,
     recognize_faces,
     clear_library,
+    get_photos_from_library,
     remove_image_from_album,
     add_photos_from_folder,
 };
@@ -17,11 +18,6 @@ use commands::photo_library_commands::{
 #[tauri::command]
 fn get_app_state(repo: State<'_, DittoRepository>) -> AppState {
     repo.get_state()
-}
-
-#[tauri::command]
-async fn get_library_photos(repo: State<'_, DittoRepository>) -> Result<Vec<PhotoPayload>, String> {
-    repo.get_photos().await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -49,7 +45,7 @@ pub fn run() {
             clear_library,
             remove_image_from_album,
             get_app_state,
-            get_library_photos
+            get_photos_from_library
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

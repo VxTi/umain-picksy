@@ -40,7 +40,7 @@ export function PhotoLibraryProvider({
 	children: React.ReactNode;
 }) {
 	const [photos, setPhotos] = React.useState<SetLibraryResult["photos"]>([]);
-	const [loading, setLoading] = React.useState<boolean>(false);
+	const [loading, setLoading] = React.useState<boolean>(true);
 
 	const addPhotosToLibrary = useCallbackEffect(
 		() =>

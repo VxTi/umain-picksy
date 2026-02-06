@@ -69,7 +69,7 @@ export async function openEditWindow(images?: unknown) {
 	if (existing) {
 		await existing.setFocus();
 		if (images) {
-			await emit("edit-images", images);
+			await emit(EventType.EDIT_IMAGES, images);
 		}
 		return existing;
 	}
@@ -85,19 +85,19 @@ export async function openEditWindow(images?: unknown) {
 	});
 
 	// Wait for window to be created, then send images
-	editWindow.once("tauri://created", async () => {
+	await editWindow.once("tauri://created", async () => {
 		console.log("Edit window created");
 		if (images) {
 			// Longer delay to ensure React component has mounted and listener is ready
 			setTimeout(() => {
 				console.log("Emitting edit-images with", images);
-				emit("edit-images", images);
+				emit(EventType.EDIT_IMAGES, images);
 			}, 500);
 		}
 	});
 
 	// When edit window is closed, show the gallery window again
-	editWindow.once("tauri://destroyed", async () => {
+	await editWindow.once("tauri://destroyed", async () => {
 		console.log("Edit window closed, showing gallery window");
 		const galleryWindow = await WebviewWindow.getByLabel("gallery");
 		if (galleryWindow) {
@@ -106,7 +106,7 @@ export async function openEditWindow(images?: unknown) {
 		}
 	});
 
-	editWindow.once("tauri://error", (e) => {
+	await editWindow.once("tauri://error", (e) => {
 		console.error("Failed to create edit window:", e);
 		// Show gallery window again on error
 		currentWindow.show();

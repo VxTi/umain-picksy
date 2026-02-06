@@ -1,4 +1,4 @@
-use crate::ditto_repo::{AppAction, DittoRepository, Photo};
+use crate::ditto_repo::{AppAction, DittoRepository, Photo, PhotoPayload};
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
 use rexif::{ExifTag, TagValue};
@@ -338,4 +338,9 @@ pub async fn add_photos_to_library(
 #[tauri::command]
 pub async fn clear_library(repo: State<'_, DittoRepository>) -> Result<(), String> {
     repo.clear_library().await
+}
+
+#[tauri::command]
+pub async fn get_photos_from_library(repo: State<'_, DittoRepository>) -> Result<Vec<PhotoPayload>, String> {
+    repo.get_photos().await
 }

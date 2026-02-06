@@ -106,21 +106,6 @@ function GalleryNavigationBar({
 		};
 	}, []);
 
-	const resolvePeerLabel = (peerId: string) => {
-		if (presence?.local_peer.peer_key === peerId) {
-			return `You (${localPeerName})`;
-		}
-		const peer = presence?.remote_peers.find((p) => p.peer_key === peerId);
-		if (!peer) {
-			return `${peerId.slice(0, 8)}...`;
-		}
-		return (
-			(peer.metadata?.name as string | undefined) ??
-			peer.device_name ??
-			peer.peer_key
-		);
-	};
-
 	const handleEditClick = () => {
 		if (selectedImages.length > 0) {
 			void openEditWindow(selectedImages);
@@ -138,10 +123,6 @@ function GalleryNavigationBar({
 	const onlineCount = presence?.remote_peers.length ?? 0;
 	const onlineLabel = onlineCount > 0 ? `${onlineCount} online` : "Offline";
 	const onlineDotClass = onlineCount > 0 ? "bg-emerald-500" : "bg-red-500";
-	const localPeerName =
-		(presence?.local_peer.metadata?.name as string | undefined) ??
-		presence?.local_peer.device_name ??
-		"This device";
 
 	return (
 		<div className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 py-4">
@@ -149,24 +130,12 @@ function GalleryNavigationBar({
 				Select up to 2 images ({selectedImages.length}/2 selected)
 			</p>
 			<div className="relative flex items-center gap-2">
-				<select
-					className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-					value={authorFilter}
-					onChange={(event) => setAuthorFilter(event.target.value)}
-				>
-					<option value="all">All authors</option>
-					{Array.from(
-						new Set(
-							photos
-								.map((photo) => photo.author_peer_id)
-								.filter((id): id is string => Boolean(id)),
-						),
-					).map((authorId) => (
-						<option key={authorId} value={authorId}>
-							{resolvePeerLabel(authorId)}
-						</option>
-					))}
-				</select>
+				<FilterUsers
+					photos={photos}
+					presence={presence}
+					authorFilter={authorFilter}
+					setAuthorFilter={setAuthorFilter}
+				/>
 				<div
 					onMouseEnter={() => setShowPeers(true)}
 					onMouseLeave={() => {
@@ -214,6 +183,58 @@ function GalleryNavigationBar({
 				{showPeers && <ActiveUsers presence={presence} />}
 			</div>
 		</div>
+	);
+}
+
+function FilterUsers({
+	photos,
+	presence,
+	authorFilter,
+	setAuthorFilter,
+}: {
+	photos: Readonly<Photo[]>;
+	presence: PresencePayload | null;
+	authorFilter: string;
+	setAuthorFilter: (value: string) => void;
+}) {
+	const localPeerName =
+		(presence?.local_peer.metadata?.name as string | undefined) ??
+		presence?.local_peer.device_name ??
+		"This device";
+	const resolvePeerLabel = (peerId: string) => {
+		if (presence?.local_peer.peer_key === peerId) {
+			return `You (${localPeerName})`;
+		}
+		const peer = presence?.remote_peers.find((p) => p.peer_key === peerId);
+		if (!peer) {
+			return `${peerId.slice(0, 8)}...`;
+		}
+		return (
+			(peer.metadata?.name as string | undefined) ??
+			peer.device_name ??
+			peer.peer_key
+		);
+	};
+
+	return (
+		<select
+			className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			value={authorFilter}
+			onChange={(event) => setAuthorFilter(event.target.value)}
+		>
+			<option value="all">All authors</option>
+			{Array.from(
+				new Set(
+					photos
+						.map((photo) => photo.author_peer_id)
+						.filter((id): id is string => Boolean(id)),
+				),
+			).map((authorId) => (
+				<option key={authorId} value={authorId}>
+					{resolvePeerLabel(authorId)}
+				</option>
+			))}
+		</select>
 	);
 }
 

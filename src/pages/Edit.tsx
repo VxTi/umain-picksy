@@ -1,3 +1,4 @@
+import { EventType } from "@/lib/events";
 import { SaveIcon } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -17,7 +18,7 @@ function Edit() {
 
 	// Listen for images from the gallery window via events
 	useEffect(() => {
-		const unlisten = listen<ImageItem[]>("edit-images", (event) => {
+		const unlisten = listen<ImageItem[]>(EventType.EDIT_IMAGES, (event) => {
 			console.log("Edit received images via event:", event.payload.length);
 			setImages(event.payload);
 		});
