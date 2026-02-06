@@ -3,16 +3,13 @@ use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
+mod vision;
+use vision::{analyze_image_metadata, recognize_faces};
+
 #[derive(Serialize)]
 pub struct SelectionResponse {
     path: String,
     image_count: usize,
-}
-
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
 #[tauri::command]
@@ -71,7 +68,11 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![select_source_folder])
+        .invoke_handler(tauri::generate_handler![
+            select_source_folder,
+            analyze_image_metadata,
+            recognize_faces
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
