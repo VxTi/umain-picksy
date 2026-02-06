@@ -8,12 +8,14 @@ type PicksyViewProps = {
   photos: SetLibraryResult["photos"];
   onSelectFolder: () => void;
   onAddPhoto: () => void;
+  onClearLibrary: () => void;
 };
 
 export default function PicksyView({
   photos,
   onSelectFolder,
   onAddPhoto,
+  onClearLibrary,
 }: PicksyViewProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -46,6 +48,15 @@ export default function PicksyView({
             >
               <ImagesIcon />
               View Library
+            </Button>
+
+            <Button
+              size="lg"
+              variant="destructive"
+              className="w-full"
+              onClick={onClearLibrary}
+            >
+              Clear library
             </Button>
           </div>
 

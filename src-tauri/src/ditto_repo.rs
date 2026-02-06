@@ -230,6 +230,19 @@ impl DittoRepository {
             .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
         Ok(collect_photo_payloads(&result))
     }
+
+    pub async fn clear_library(&self) -> Result<(), String> {
+        let store = self.ditto.store();
+        store
+            .execute_v2(format!(
+                "DELETE FROM {PHOTOS_COLLECTION} WHERE _id != ''"
+            ))
+            .await
+            .map_err(|e| format!("Failed to clear Ditto photos: {e}"))?;
+
+        self.dispatch(AppAction::ClearImageLibraryContent).await?;
+        Ok(())
+    }
 }
 
 impl AppState {
