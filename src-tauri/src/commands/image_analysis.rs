@@ -269,43 +269,59 @@ pub async fn select_images_directory(
 pub async fn add_photo_to_library(
     app: AppHandle,
     repo: State<'_, DittoRepository>,
-) -> Result<Option<Photo>, String> {
+) -> Result<Option<Vec<Photo>>, String> {
     use tauri_plugin_dialog::FilePath;
 
     let (tx, rx) = std::sync::mpsc::channel();
 
     app.dialog()
         .file()
-        .add_filter("Image", &["jpg", "jpeg", "png", "heic", "webp", "tiff"])
-        .pick_file(move |path| {
-            tx.send(path).unwrap();
+        .add_filter(
+            "Images",
+            &[
+                "jpg", "jpeg", "png", "heic", "webp", "tiff", "JPG", "JPEG", "PNG", "HEIC", "WEBP",
+                "TIFF",
+            ],
+        )
+        .pick_files(move |paths| {
+            tx.send(paths).unwrap();
         });
 
-    let file = rx.recv().map_err(|e| e.to_string())?;
+    let files = rx.recv().map_err(|e| e.to_string())?;
 
-    if let Some(file_path) = file {
-        let path_str = match file_path {
-            FilePath::Path(p) => p.to_string_lossy().to_string(),
-            FilePath::Url(u) => u
-                .to_file_path()
-                .map_err(|_| "Invalid URL".to_string())?
-                .to_string_lossy()
-                .to_string(),
-        };
-
-        let photo = process_image_file(path_str)?;
-
+    if let Some(file_paths) = files {
+        let mut photos = Vec::new();
         let mut current_state = repo.get_state();
-        current_state.images.push(photo.clone());
+
+        for file_path in file_paths {
+            let path_str = match file_path {
+                FilePath::Path(p) => p.to_string_lossy().to_string(),
+                FilePath::Url(u) => u
+                    .to_file_path()
+                    .map_err(|_| "Invalid URL".to_string())?
+                    .to_string_lossy()
+                    .to_string(),
+            };
+
+            // Using unwrap or continue to skip bad files instead of failing the whole batch
+            if let Ok(photo) = process_image_file(path_str) {
+                photos.push(photo.clone());
+                current_state.images.push(photo);
+            }
+        }
+
+        if photos.is_empty() {
+            return Ok(None);
+        }
 
         repo.dispatch(AppAction::SetImageLibraryContent {
             images: current_state.images,
         })
         .await?;
 
-        repo.upsert_photos_from_paths(&[photo.clone()]).await?;
+        repo.upsert_photos_from_paths(&photos).await?;
 
-        Ok(Some(photo))
+        Ok(Some(photos))
     } else {
         Ok(None)
     }
