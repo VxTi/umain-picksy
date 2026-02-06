@@ -1,21 +1,21 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 import {
   listenToBackendCommands,
   type BackendCommand,
-  type Photo,
-} from "../backend/commandStream";
-import { getLibraryPhotos } from "../lib/library";
-import { selectSourceFolder, analyzeImageMetadata } from '../lib/vision';
-import PicksyView from "../PicksyView";
+  type Photo
+} from '@/backend/commandStream';
+import { getLibraryPhotos } from '@/lib/library';
+import { selectSourceFolder, analyzeImageMetadata } from '@/lib/vision';
+import PicksyView from '../PicksyView';
 
 function Home() {
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [ photos, setPhotos ] = useState<Photo[]>([]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
 
     listenToBackendCommands((command: BackendCommand) => {
-      if (command.command === "SetLibrary") {
+      if (command.command === 'SetLibrary') {
         setPhotos(command.photos);
       }
     })
@@ -23,7 +23,7 @@ function Home() {
         unlisten = stop;
       })
       .catch((error) => {
-        console.error("Failed to listen for backend commands", error);
+        console.error('Failed to listen for backend commands', error);
       });
 
     getLibraryPhotos()
@@ -31,7 +31,7 @@ function Home() {
         setPhotos(initialPhotos);
       })
       .catch((error) => {
-        console.error("Failed to fetch library photos", error);
+        console.error('Failed to fetch library photos', error);
       });
 
     return () => {
@@ -51,14 +51,14 @@ function Home() {
         console.log(metadata);
       }
     } catch (error) {
-      console.error("Failed to select source folder", error);
+      console.error('Failed to select source folder', error);
     }
   }, []);
 
   return (
-       <main className="min-h-screen">
-         <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
-       </main>
+    <main className="container">
+      <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
+    </main>
   );
 }
 

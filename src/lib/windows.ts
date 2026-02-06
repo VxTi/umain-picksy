@@ -84,9 +84,11 @@ export async function openEditWindow(images?: unknown) {
   editWindow.once("tauri://created", async () => {
     console.log("Edit window created");
     if (images) {
+      // Longer delay to ensure React component has mounted and listener is ready
       setTimeout(() => {
+        console.log("Emitting edit-images with", images);
         emit("edit-images", images);
-      }, 100);
+      }, 500);
     }
   });
 

@@ -1,5 +1,6 @@
 import { Slider } from "@/components/ui/slider";
 import { Card, CardContent } from "@/components/ui/card";
+import { BlendIcon, DropletIcon, SunIcon } from 'lucide-react';
 
 type Props = {
   brightness: number; // 0..200
@@ -25,13 +26,14 @@ export default function EditingSettingsBar({
   //onGrayscaleChange
 }: Props) {
   return (
-    <div className="h-full w-full p-6">
+    <div className="h-full w-full p-6 flex flex-col gap-2">
 
       {/* Brightness */}
-      <Card className="w-full rounded-2xl shadow-xl">
+      <Card className="w-full rounded-2xl">
         <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
-            <div className="text-sm font-medium">
+            <div className="text-sm font-medium flex items-center gap-1">
+              <SunIcon className='size-4'/>
               Brightness: {brightness}%
             </div>
             <Slider
@@ -46,10 +48,11 @@ export default function EditingSettingsBar({
       </Card>
 
       {/* Saturation */}
-      <Card className="w-full rounded-2xl shadow-xl">
+      <Card className="w-full rounded-2xl">
         <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
-            <div className="text-sm font-medium">
+            <div className="text-sm font-medium flex items-center gap-1">
+              <BlendIcon className='size-4'/>
               Saturation: {saturation}%
             </div>
             <Slider
@@ -64,11 +67,12 @@ export default function EditingSettingsBar({
       </Card>
 
       {/* Blur */}
-      <Card className="w-full rounded-2xl shadow-xl">
+      <Card className="w-full rounded-2xl">
         <CardContent className="p-6 space-y-4">
           <div className="space-y-2">
-            <div className="text-sm font-medium">
-              Blur: {blur}%
+            <div className="text-sm font-medium flex items-center gap-1">
+              <DropletIcon className='size-4'/>
+              Blur: {blur}px
             </div>
             <Slider
               value={[blur]}

@@ -1,7 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import { useNavigate } from "react-router-dom";
 import type { Photo } from "./backend/commandStream";
 import { openGalleryWindow } from "@/lib/windows";
 

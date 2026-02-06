@@ -26,6 +26,7 @@ pub struct ImageMetadata {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Photo {
+    pub id: String,
     pub image_path: String,
     pub base64: String,
     pub metadata: Option<ImageMetadata>,
@@ -171,12 +172,14 @@ impl DittoRepository {
                 .map(|name| name.to_string_lossy().to_string())
                 .unwrap_or_else(|| image.image_path.clone());
 
-            if !seen.insert(filename.clone()) {
+            let doc_id = image.id.clone();
+
+            if !seen.insert(doc_id.clone()) {
                 continue;
             }
 
             let doc = PhotoDocument {
-                _id: filename.clone(),
+                _id: doc_id,
                 filename: filename.clone(),
                 path: image.image_path.clone(),
                 base64: image.base64.clone(),
@@ -263,9 +266,13 @@ async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
         return Ok(AppState::default());
     };
 
-    let stored: StoredState = item
-        .deserialize_value()
-        .map_err(|e| format!("Failed to deserialize Ditto state: {e}"))?;
+    let stored: StoredState = match item.deserialize_value() {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Failed to deserialize Ditto state (schema mismatch?): {e}. Resetting state.");
+            return Ok(AppState::default());
+        }
+    };
     Ok(stored.state)
 }
 

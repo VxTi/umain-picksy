@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
-import { Button } from "@/components/ui/button";
 import { convertFileSrc } from "@tauri-apps/api/core";
-import type { Photo } from "../backend/commandStream";
 import { getLibraryPhotos } from "@/lib/library";
 import { openEditWindow } from "@/lib/windows";
+import { PencilIcon }               from 'lucide-react';
+import { useState, useEffect }                 from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Button }                   from "@/components/ui/button";
+import type { Photo }               from '@/backend/commandStream';
 
 export interface ImageItem {
 	id: string;
@@ -89,6 +90,7 @@ function Gallery() {
 						onClick={handleEditClick}
 						disabled={selectedImages.length === 0}
 					>
+						<PencilIcon/>
 						Edit Selected
 					</Button>
 				</div>
