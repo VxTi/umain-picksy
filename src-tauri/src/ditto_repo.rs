@@ -46,6 +46,10 @@ pub struct Photo {
     pub config: Option<PhotoConfig>,
     #[serde(default)]
     pub favorite: bool,
+    #[serde(default)]
+    pub stack_id: Option<String>,
+    #[serde(default)]
+    pub is_stack_primary: bool,
 }
 
 
@@ -80,6 +84,10 @@ struct PhotoDocument {
     pub config: Option<PhotoConfig>,
     #[serde(default)]
     pub favorite: bool,
+    #[serde(default)]
+    pub stack_id: Option<String>,
+    #[serde(default)]
+    pub is_stack_primary: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -105,6 +113,9 @@ pub struct PhotoPayload {
     pub author_peer_id: Option<String>,
     pub config: Option<PhotoConfig>,
     pub favorite: bool,
+    #[serde(default)]
+    pub stack_id: Option<String>,
+    pub is_stack_primary: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -363,6 +374,71 @@ impl DittoRepository {
         Ok(())
     }
 
+    pub async fn update_photo_stack(
+        &self,
+        photo_ids: Vec<String>,
+        stack_id: String,
+        primary_id: String,
+    ) -> Result<(), String> {
+        let store = self.ditto.store();
+        for id in photo_ids {
+            let is_primary = id == primary_id;
+            store
+                .execute_v2((
+                    format!(
+                        "UPDATE {PHOTOS_COLLECTION} SET stack_id = :stack_id, is_stack_primary = :is_stack_primary WHERE _id = :id"
+                    ),
+                    serde_json::json!({ "stack_id": stack_id, "is_stack_primary": is_primary, "id": id }),
+                ))
+                .await
+                .map_err(|e| format!("Failed to update photo stack: {e}"))?;
+        }
+        Ok(())
+    }
+
+    pub async fn set_stack_primary(
+        &self,
+        stack_id: &str,
+        primary_id: &str,
+    ) -> Result<(), String> {
+        let store = self.ditto.store();
+        store
+            .execute_v2((
+                format!(
+                    "UPDATE {PHOTOS_COLLECTION} SET is_stack_primary = false WHERE stack_id = :stack_id"
+                ),
+                serde_json::json!({ "stack_id": stack_id }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to reset stack primary: {e}"))?;
+        store
+            .execute_v2((
+                format!(
+                    "UPDATE {PHOTOS_COLLECTION} SET is_stack_primary = true WHERE _id = :id"
+                ),
+                serde_json::json!({ "id": primary_id }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to set stack primary: {e}"))?;
+        Ok(())
+    }
+
+    pub async fn clear_photo_stack(&self, photo_ids: Vec<String>) -> Result<(), String> {
+        let store = self.ditto.store();
+        for id in photo_ids {
+            store
+                .execute_v2((
+                    format!(
+                        "UPDATE {PHOTOS_COLLECTION} SET stack_id = NULL, is_stack_primary = false WHERE _id = :id"
+                    ),
+                    serde_json::json!({ "id": id }),
+                ))
+                .await
+                .map_err(|e| format!("Failed to clear photo stack: {e}"))?;
+        }
+        Ok(())
+    }
+
     pub async fn emit_library_snapshot(&self, app: &AppHandle) -> Result<(), String> {
         emit_library_snapshot(self.ditto.as_ref(), app).await
     }
@@ -581,6 +657,8 @@ async fn upsert_photos_from_paths_with_ditto(
             author_peer_id: Some(author_peer_id.clone()),
             config: image.config.clone(),
             favorite: image.favorite,
+            stack_id: image.stack_id.clone(),
+            is_stack_primary: image.is_stack_primary,
         };
 
         docs.push(doc);
@@ -705,6 +783,8 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
                 author_peer_id: doc.author_peer_id,
                 config: doc.config,
                 favorite: doc.favorite,
+                stack_id: doc.stack_id,
+                is_stack_primary: doc.is_stack_primary,
             }
         })
         .collect()

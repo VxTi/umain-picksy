@@ -9,6 +9,33 @@ use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetPhotoStackArgs {
+    #[serde(alias = "photo_ids")]
+    photo_ids: Vec<String>,
+    #[serde(alias = "stack_id")]
+    stack_id: String,
+    #[serde(alias = "primary_id")]
+    primary_id: String,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetStackPrimaryArgs {
+    #[serde(alias = "stack_id")]
+    stack_id: String,
+    #[serde(alias = "primary_id")]
+    primary_id: String,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClearPhotoStackArgs {
+    #[serde(alias = "photo_ids")]
+    photo_ids: Vec<String>,
+}
+
 const UPSERT_BATCH_SIZE: usize = 25;
 
 #[derive(Debug, Serialize)]
@@ -211,6 +238,8 @@ fn process_image_file(path: String) -> Result<Photo, String> {
         base64: base64_content,
         config: None,
         favorite: false,
+        stack_id: None,
+        is_stack_primary: false,
     })
 }
 
@@ -388,4 +417,30 @@ pub async fn set_photo_favorite(
     favorite: bool,
 ) -> Result<(), String> {
     repo.update_photo_favorite(&id, favorite).await
+}
+
+#[tauri::command]
+pub async fn set_photo_stack(
+    repo: State<'_, DittoRepository>,
+    args: SetPhotoStackArgs,
+) -> Result<(), String> {
+    repo.update_photo_stack(args.photo_ids, args.stack_id, args.primary_id)
+        .await
+}
+
+#[tauri::command]
+pub async fn set_stack_primary(
+    repo: State<'_, DittoRepository>,
+    args: SetStackPrimaryArgs,
+) -> Result<(), String> {
+    repo.set_stack_primary(&args.stack_id, &args.primary_id)
+        .await
+}
+
+#[tauri::command]
+pub async fn clear_photo_stack(
+    repo: State<'_, DittoRepository>,
+    args: ClearPhotoStackArgs,
+) -> Result<(), String> {
+    repo.clear_photo_stack(args.photo_ids).await
 }

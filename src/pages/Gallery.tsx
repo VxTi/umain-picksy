@@ -1,7 +1,6 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Spinner } from "@/components/ui/spinner";
 import { EventType } from "@/lib/events";
-import { SyncStatus } from "@/lib/synchronization";
 import { PhotoComponent } from "@/pages/PhotoComponent";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
@@ -9,6 +8,8 @@ import { PencilIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
@@ -25,27 +26,199 @@ interface PresencePayload {
 }
 
 export default function Gallery() {
-	const { photos, loading } = usePhotoLibrary();
+	const { photos, loading, setPhotoStack, setStackPrimary, clearPhotoStack } =
+		usePhotoLibrary();
 
 	const [authorFilter, setAuthorFilter] = useState("all");
 
 	const [selectedImages, setSelectedImages] = useState<Readonly<Photo[]>>([]);
 	const [fullScreenPhoto, setFullScreenPhoto] = useState<Photo | null>(null);
 	const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
+	const [openStackId, setOpenStackId] = useState<string | null>(null);
+	const [autoStackingEnabled, setAutoStackingEnabled] = useState(false);
+	const [autoStackedStackIds, setAutoStackedStackIds] = useState<Set<string>>(
+		() => new Set(),
+	);
 
 	const filteredPhotos =
 		authorFilter === "all"
 			? photos
 			: photos.filter((photo) => photo.author_peer_id === authorFilter);
+	const stackGroups = useMemo(() => {
+		const groups = new Map<string, Photo[]>();
+		for (const photo of filteredPhotos) {
+			if (!photo.stack_id) continue;
+			const existing = groups.get(photo.stack_id) ?? [];
+			existing.push(photo);
+			groups.set(photo.stack_id, existing);
+		}
+		return groups;
+	}, [filteredPhotos]);
+	const displayPhotos = useMemo(() => {
+		const result: Photo[] = [];
+		const seenStacks = new Set<string>();
+		for (const photo of filteredPhotos) {
+			const stackId = photo.stack_id;
+			if (!stackId) {
+				result.push(photo);
+				continue;
+			}
+			if (seenStacks.has(stackId)) {
+				continue;
+			}
+			const stack = stackGroups.get(stackId) ?? [];
+			const primary =
+				stack.find((item) => item.is_stack_primary) ?? stack[0] ?? photo;
+			result.push(primary);
+			seenStacks.add(stackId);
+		}
+		return result;
+	}, [filteredPhotos, stackGroups]);
 	const filteredPhotoIds = useMemo(
-		() => filteredPhotos.map((photo) => photo.id),
-		[filteredPhotos],
+		() => displayPhotos.map((photo) => photo.id),
+		[displayPhotos],
 	);
+	const openStackPhotos = useMemo(() => {
+		if (!openStackId) return [];
+		return stackGroups.get(openStackId) ?? [];
+	}, [openStackId, stackGroups]);
+	const openStackPrimaryId = useMemo(() => {
+		return (
+			openStackPhotos.find((photo) => photo.is_stack_primary)?.id ??
+			openStackPhotos[0]?.id ??
+			null
+		);
+	}, [openStackPhotos]);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset selection on filter change
 	useEffect(() => {
 		setSelectedImages([]);
 	}, [authorFilter]);
+
+	useEffect(() => {
+		setSelectedImages((prev) =>
+			prev.filter((photo) => filteredPhotoIds.includes(photo.id)),
+		);
+	}, [filteredPhotoIds]);
+
+	useEffect(() => {
+		if (!autoStackingEnabled) return;
+		const unstacked = filteredPhotos.filter((photo) => !photo.stack_id);
+		if (unstacked.length < 2) return;
+
+		const groups = buildHeuristicStacks(unstacked);
+		if (groups.length === 0) return;
+
+		void (async () => {
+			for (const group of groups) {
+				if (group.length < 2) continue;
+				const stackId = crypto.randomUUID();
+				const sorted = [...group].sort((a, b) =>
+					a.filename.localeCompare(b.filename),
+				);
+				const primaryId = sorted[0].id;
+				const photoIds = sorted.map((photo) => photo.id);
+				try {
+					await setPhotoStack(photoIds, stackId, primaryId);
+					setAutoStackedStackIds((prev) => {
+						const next = new Set(prev);
+						next.add(stackId);
+						return next;
+					});
+				} catch {
+					toast.error("Failed to auto-stack images.");
+					break;
+				}
+			}
+		})();
+	}, [autoStackingEnabled, filteredPhotos, setPhotoStack]);
+
+	useEffect(() => {
+		if (autoStackingEnabled) return;
+		if (autoStackedStackIds.size === 0) return;
+		const stackIds = Array.from(autoStackedStackIds);
+		const photoIds = stackIds.flatMap(
+			(stackId) => stackGroups.get(stackId)?.map((photo) => photo.id) ?? [],
+		);
+		if (photoIds.length === 0) {
+			setAutoStackedStackIds(new Set());
+			return;
+		}
+		void clearPhotoStack(photoIds)
+			.then(() => setAutoStackedStackIds(new Set()))
+			.catch(() => toast.error("Failed to clear auto-stacked images."));
+	}, [autoStackingEnabled, autoStackedStackIds, clearPhotoStack, stackGroups]);
+
+	const selectedStackIds = useMemo(
+		() =>
+			Array.from(
+				new Set(
+					selectedImages
+						.map((photo) => photo.stack_id)
+						.filter((id): id is string => Boolean(id)),
+				),
+			),
+		[selectedImages],
+	);
+	const selectedOnlyStack =
+		selectedImages.length > 0 &&
+		selectedStackIds.length === 1 &&
+		selectedImages.every((photo) => photo.stack_id === selectedStackIds[0]);
+	const showStackAction = selectedImages.length >= 2 || selectedOnlyStack;
+	const stackActionLabel = selectedOnlyStack
+		? "Unstack"
+		: selectedStackIds.length === 1
+			? "Add to stack"
+			: "Create stack";
+
+	const handleCreateStack = useCallback(() => {
+		if (selectedImages.length < 1) return;
+		const selectedIds = selectedImages.map((photo) => photo.id);
+
+		if (selectedOnlyStack) {
+			const stackId = selectedStackIds[0];
+			const stackIds =
+				stackGroups.get(stackId)?.map((photo) => photo.id) ?? selectedIds;
+			void clearPhotoStack(stackIds)
+				.then(() => {
+					setSelectedImages([]);
+					setActivePhotoId(null);
+				})
+				.catch(() => toast.error("Failed to unstack images."));
+			return;
+		}
+
+		const stackId =
+			selectedStackIds.length === 1 ? selectedStackIds[0] : crypto.randomUUID();
+		const primaryId =
+			selectedStackIds.length === 1
+				? (selectedImages.find((photo) => photo.is_stack_primary)?.id ??
+					selectedImages[0].id)
+				: (activePhotoId ?? selectedImages[0].id);
+		void setPhotoStack(selectedIds, stackId, primaryId)
+			.then(() => {
+				setSelectedImages([]);
+				setActivePhotoId(primaryId);
+			})
+			.catch(() => toast.error("Failed to update stack."));
+	}, [
+		activePhotoId,
+		clearPhotoStack,
+		selectedImages,
+		selectedOnlyStack,
+		selectedStackIds,
+		setPhotoStack,
+		stackGroups,
+	]);
+
+	const handleSetStackPrimary = useCallback(
+		(stackId: string, primaryId: string) => {
+			void setStackPrimary(stackId, primaryId).catch(() =>
+				toast.error("Failed to update stack primary."),
+			);
+		},
+		[setStackPrimary],
+	);
 
 	useEffect(() => {
 		if (activePhotoId && !filteredPhotoIds.includes(activePhotoId)) {
@@ -54,15 +227,22 @@ export default function Gallery() {
 	}, [activePhotoId, filteredPhotoIds]);
 
 	useEffect(() => {
-		if (!fullScreenPhoto) return;
+		if (openStackId && !stackGroups.has(openStackId)) {
+			setOpenStackId(null);
+		}
+	}, [openStackId, stackGroups]);
+
+	useEffect(() => {
+		if (!fullScreenPhoto && !openStackId) return;
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
 				setFullScreenPhoto(null);
+				setOpenStackId(null);
 			}
 		};
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [fullScreenPhoto]);
+	}, [fullScreenPhoto, openStackId]);
 
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
@@ -85,7 +265,7 @@ export default function Gallery() {
 			) {
 				return;
 			}
-			if (filteredPhotos.length === 0) return;
+			if (displayPhotos.length === 0) return;
 
 			event.preventDefault();
 
@@ -97,7 +277,7 @@ export default function Gallery() {
 			};
 
 			const currentId =
-				selectedImages[selectedImages.length - 1]?.id ?? filteredPhotos[0].id;
+				selectedImages[selectedImages.length - 1]?.id ?? displayPhotos[0].id;
 			const currentIndex = Math.max(0, filteredPhotoIds.indexOf(currentId));
 			const columns = getGridColumns();
 			let nextIndex = currentIndex;
@@ -119,12 +299,12 @@ export default function Gallery() {
 					nextIndex = 0;
 					break;
 				case "End":
-					nextIndex = filteredPhotos.length - 1;
+					nextIndex = displayPhotos.length - 1;
 					break;
 			}
 
-			nextIndex = Math.min(Math.max(nextIndex, 0), filteredPhotos.length - 1);
-			const nextPhoto = filteredPhotos[nextIndex];
+			nextIndex = Math.min(Math.max(nextIndex, 0), displayPhotos.length - 1);
+			const nextPhoto = displayPhotos[nextIndex];
 			setSelectedImages([nextPhoto]);
 			setActivePhotoId(nextPhoto.id);
 			requestAnimationFrame(() => {
@@ -137,7 +317,7 @@ export default function Gallery() {
 
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [filteredPhotoIds, filteredPhotos, selectedImages]);
+	}, [displayPhotos, filteredPhotoIds, selectedImages]);
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -146,6 +326,11 @@ export default function Gallery() {
 					selectedImages={selectedImages}
 					authorFilter={authorFilter}
 					setAuthorFilter={setAuthorFilter}
+					onCreateStack={handleCreateStack}
+					stackActionLabel={stackActionLabel}
+					showStackAction={showStackAction}
+					autoStackingEnabled={autoStackingEnabled}
+					onToggleAutoStacking={setAutoStackingEnabled}
 				/>
 
 				{loading && (
@@ -156,7 +341,7 @@ export default function Gallery() {
 				)}
 
 				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-					{filteredPhotos.map((image) => (
+					{displayPhotos.map((image) => (
 						<AlbumPhoto
 							key={image.id}
 							image={image}
@@ -165,36 +350,124 @@ export default function Gallery() {
 							onOpenFullScreen={setFullScreenPhoto}
 							activePhotoId={activePhotoId}
 							setActivePhotoId={setActivePhotoId}
+							stackPhotos={stackGroups.get(image.stack_id ?? "") ?? []}
+							onOpenStack={setOpenStackId}
 						/>
 					))}
 				</div>
 			</div>
 			{fullScreenPhoto && (
-				<div
-					className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6"
-					onClick={() => setFullScreenPhoto(null)}
-				>
-					<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80">
-						<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
-							ESC
-						</span>
-						<button
-							type="button"
-							onClick={(event) => {
-								event.stopPropagation();
-								setFullScreenPhoto(null);
-							}}
-							aria-label="Close full screen"
-							className="p-1 text-white/80 transition-colors hover:text-white"
-						>
-							<XIcon className="h-5 w-5" />
-						</button>
-					</div>
-					<img
-						src={fullScreenPhoto.base64}
-						alt={fullScreenPhoto.filename}
-						className="max-h-full max-w-full object-contain"
+				<div className="fixed inset-0 z-50">
+					<button
+						type="button"
+						className="absolute inset-0 bg-black/90"
+						onClick={() => setFullScreenPhoto(null)}
+						aria-label="Close full screen"
 					/>
+					<div className="relative z-10 flex h-full items-center justify-center p-6">
+						<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80">
+							<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
+								ESC
+							</span>
+							<button
+								type="button"
+								onClick={(event) => {
+									event.stopPropagation();
+									setFullScreenPhoto(null);
+								}}
+								aria-label="Close full screen"
+								className="p-1 text-white/80 transition-colors hover:text-white"
+							>
+								<XIcon className="h-5 w-5" />
+							</button>
+						</div>
+						<img
+							src={fullScreenPhoto.base64}
+							alt={fullScreenPhoto.filename}
+							className="max-h-full max-w-full object-contain"
+						/>
+					</div>
+				</div>
+			)}
+			{openStackId && (
+				<div className="fixed inset-0 z-40">
+					<button
+						type="button"
+						className="absolute inset-0 bg-black/80"
+						onClick={() => setOpenStackId(null)}
+						aria-label="Close stack"
+					/>
+					<div className="relative z-10 flex h-full items-center justify-center p-6">
+						<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80">
+							<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
+								ESC
+							</span>
+							<button
+								type="button"
+								onClick={(event) => {
+									event.stopPropagation();
+									setOpenStackId(null);
+								}}
+								aria-label="Close stack"
+								className="p-1 text-white/80 transition-colors hover:text-white"
+							>
+								<XIcon className="h-5 w-5" />
+							</button>
+						</div>
+						<div className="w-full max-w-5xl rounded-xl bg-background/95 p-4 shadow-lg">
+							<div className="mb-4 flex items-center justify-between">
+								<div>
+									<p className="text-sm text-muted-foreground">
+										Stack ({openStackPhotos.length})
+									</p>
+									{openStackPrimaryId && (
+										<p className="text-base font-semibold">
+											Primary:{" "}
+											{
+												openStackPhotos.find(
+													(photo) => photo.id === openStackPrimaryId,
+												)?.filename
+											}
+										</p>
+									)}
+								</div>
+							</div>
+							<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+								{openStackPhotos.map((photo) => {
+									const isPrimary = photo.id === openStackPrimaryId;
+									return (
+										<div
+											key={photo.id}
+											className={twMerge(
+												"relative rounded-lg border-2 p-2",
+												isPrimary
+													? "border-primary"
+													: "border-muted-foreground/30",
+											)}
+										>
+											<PhotoComponent
+												src={photo.base64}
+												alt={photo.filename}
+												config={photo.config ?? {}}
+											/>
+											<div className="mt-2 flex items-center justify-between">
+												<span className="text-sm">{photo.filename}</span>
+												<Button
+													size="sm"
+													variant={isPrimary ? "default" : "outline"}
+													onClick={() =>
+														handleSetStackPrimary(openStackId, photo.id)
+													}
+												>
+													{isPrimary ? "Primary" : "Set as primary"}
+												</Button>
+											</div>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					</div>
 				</div>
 			)}
 		</main>
@@ -205,10 +478,20 @@ function GalleryNavigationBar({
 	authorFilter,
 	setAuthorFilter,
 	selectedImages,
+	onCreateStack,
+	stackActionLabel,
+	showStackAction,
+	autoStackingEnabled,
+	onToggleAutoStacking,
 }: {
 	authorFilter: string;
 	setAuthorFilter: (value: string) => void;
 	selectedImages: Readonly<Photo[]>;
+	onCreateStack: () => void;
+	stackActionLabel: string;
+	showStackAction: boolean;
+	autoStackingEnabled: boolean;
+	onToggleAutoStacking: (enabled: boolean) => void;
 }) {
 	const { photos, removePhotoFromLibrary, setPhotos } = usePhotoLibrary();
 
@@ -271,6 +554,16 @@ function GalleryNavigationBar({
 				selected)
 			</p>
 			<div className="relative flex items-center gap-2">
+				<div className="flex items-center gap-2">
+					<Switch
+						id="auto-stack-toggle"
+						checked={autoStackingEnabled}
+						onCheckedChange={onToggleAutoStacking}
+					/>
+					<Label htmlFor="auto-stack-toggle" className="text-sm">
+						Auto-stack similar
+					</Label>
+				</div>
 				<FilterUsers
 					photos={photos}
 					presence={presence}
@@ -309,6 +602,11 @@ function GalleryNavigationBar({
 						{selectedImages.length === 1
 							? "image"
 							: `${selectedImages.length} images`}
+					</Button>
+				)}
+				{showStackAction && (
+					<Button variant="outline" onClick={onCreateStack}>
+						{stackActionLabel}
 					</Button>
 				)}
 				<Button
@@ -383,6 +681,8 @@ function AlbumPhoto({
 	onOpenFullScreen,
 	activePhotoId,
 	setActivePhotoId,
+	stackPhotos,
+	onOpenStack,
 }: {
 	image: Photo;
 	selectedImages: Readonly<Photo[]>;
@@ -390,6 +690,8 @@ function AlbumPhoto({
 	onOpenFullScreen: (photo: Photo) => void;
 	activePhotoId: string | null;
 	setActivePhotoId: (id: string | null) => void;
+	stackPhotos: Photo[];
+	onOpenStack: (stackId: string) => void;
 }) {
 	const { setPhotoFavorite } = usePhotoLibrary();
 	const isSelected = useMemo(
@@ -397,6 +699,7 @@ function AlbumPhoto({
 		[image, selectedImages],
 	);
 	const isActive = activePhotoId === image.id;
+	const stackSize = stackPhotos.length;
 	const isFavorite = image.favorite ?? false;
 
 	const handleImageClick = useCallback(
@@ -495,8 +798,84 @@ function AlbumPhoto({
 					</span>
 				</div>
 			)}
+			{image.stack_id && stackSize > 1 && (
+				<button
+					type="button"
+					onClick={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						onOpenStack(image.stack_id ?? "");
+					}}
+					className="absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white"
+				>
+					Stack ({stackSize})
+				</button>
+			)}
 		</button>
 	);
+}
+
+type FilenameSignature = {
+	key: string;
+	numericSuffix?: number;
+};
+
+function buildHeuristicStacks(photos: Photo[]): Photo[][] {
+	const byKey = new Map<string, { photo: Photo; numericSuffix?: number }[]>();
+	for (const photo of photos) {
+		const signature = getFilenameSignature(photo.filename);
+		const existing = byKey.get(signature.key) ?? [];
+		existing.push({ photo, numericSuffix: signature.numericSuffix });
+		byKey.set(signature.key, existing);
+	}
+
+	const groups: Photo[][] = [];
+	for (const entries of byKey.values()) {
+		if (entries.length < 2) continue;
+		const withNumber = entries.every(
+			(entry) => entry.numericSuffix !== undefined,
+		);
+		if (!withNumber) {
+			groups.push(entries.map((entry) => entry.photo));
+			continue;
+		}
+		const sorted = [...entries].sort(
+			(a, b) => (a.numericSuffix ?? 0) - (b.numericSuffix ?? 0),
+		);
+		let current: Photo[] = [sorted[0].photo];
+		for (let i = 1; i < sorted.length; i += 1) {
+			const prev = sorted[i - 1].numericSuffix ?? 0;
+			const next = sorted[i].numericSuffix ?? 0;
+			if (next - prev <= 3) {
+				current.push(sorted[i].photo);
+			} else {
+				if (current.length >= 2) {
+					groups.push(current);
+				}
+				current = [sorted[i].photo];
+			}
+		}
+		if (current.length >= 2) {
+			groups.push(current);
+		}
+	}
+	return groups;
+}
+
+function getFilenameSignature(filename: string): FilenameSignature {
+	const lower = filename.toLowerCase();
+	const withoutExt = lower.replace(/\.[^/.]+$/, "");
+	const dateMatch =
+		withoutExt.match(/\b(20\d{2}[01]\d[0-3]\d)\b/) ??
+		withoutExt.match(/\b(20\d{2}-[01]\d-[0-3]\d)\b/);
+	const dateKey = dateMatch?.[1];
+	const suffixMatch = withoutExt.match(/(\d+)\s*$/);
+	const numericSuffix = suffixMatch
+		? Number.parseInt(suffixMatch[1], 10)
+		: undefined;
+	const base = withoutExt.replace(/[\s_-]*\d+$/, "").trim();
+	const key = dateKey ? `${base}|${dateKey}` : base;
+	return { key, numericSuffix };
 }
 
 function ActiveUsers({ presence }: { presence: PresencePayload | null }) {

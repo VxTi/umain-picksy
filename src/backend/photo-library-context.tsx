@@ -29,6 +29,18 @@ export interface PhotoLibraryContextType {
 		id: string,
 		favorite: boolean,
 	) => Promise<Record<string, never> | null>;
+	setPhotoStack: (
+		photoIds: string[],
+		stackId: string,
+		primaryId: string,
+	) => Promise<Record<string, never> | null>;
+	setStackPrimary: (
+		stackId: string,
+		primaryId: string,
+	) => Promise<Record<string, never> | null>;
+	clearPhotoStack: (
+		photoIds: string[],
+	) => Promise<Record<string, never> | null>;
 }
 
 export const PhotoLibraryContext =
@@ -117,6 +129,79 @@ export function PhotoLibraryProvider({
 		[],
 	);
 
+	const setPhotoStack = useCallbackEffect(
+		(photoIds: string[], stackId: string, primaryId: string) =>
+			Effect.sync(() =>
+				setPhotos((prev) =>
+					prev.map((photo) =>
+						photoIds.includes(photo.id)
+							? {
+									...photo,
+									stack_id: stackId,
+									is_stack_primary: photo.id === primaryId,
+								}
+							: photo,
+					),
+				),
+			).pipe(
+				Effect.zipRight(
+					invoke(CommandType.SET_PHOTO_STACK, {
+						args: {
+							photoIds,
+							stackId,
+							primaryId,
+						},
+					}),
+				),
+			),
+		[],
+	);
+
+	const setStackPrimary = useCallbackEffect(
+		(stackId: string, primaryId: string) =>
+			Effect.sync(() =>
+				setPhotos((prev) =>
+					prev.map((photo) =>
+						photo.stack_id === stackId
+							? { ...photo, is_stack_primary: photo.id === primaryId }
+							: photo,
+					),
+				),
+			).pipe(
+				Effect.zipRight(
+					invoke(CommandType.SET_STACK_PRIMARY, {
+						args: {
+							stackId,
+							primaryId,
+						},
+					}),
+				),
+			),
+		[],
+	);
+
+	const clearPhotoStack = useCallbackEffect(
+		(photoIds: string[]) =>
+			Effect.sync(() =>
+				setPhotos((prev) =>
+					prev.map((photo) =>
+						photoIds.includes(photo.id)
+							? { ...photo, stack_id: null, is_stack_primary: false }
+							: photo,
+					),
+				),
+			).pipe(
+				Effect.zipRight(
+					invoke(CommandType.CLEAR_PHOTO_STACK, {
+						args: {
+							photoIds,
+						},
+					}),
+				),
+			),
+		[],
+	);
+
 	useEffectEffect(
 		Effect.gen(function* () {
 			yield* listen("SetLibrary", (event) => {
@@ -151,6 +236,9 @@ export function PhotoLibraryProvider({
 				clearLibrary,
 				saveImageConfig,
 				setPhotoFavorite,
+				setPhotoStack,
+				setStackPrimary,
+				clearPhotoStack,
 			}}
 		>
 			{children}
