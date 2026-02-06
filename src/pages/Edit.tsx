@@ -25,6 +25,19 @@ function Edit() {
       url: "/photo_to_edit.jpeg",
     } as ImageItem);
 
+  const handleSave = () => {
+    const payload = {
+      imageId: image.id,
+      edits: {
+        brightness,
+        blur,
+        saturation,
+      },
+      timestamp: new Date().toISOString(),
+    };
+    console.log("Edits " + payload.edits.blur + " " + payload.edits.brightness + " " + payload.edits.saturation)
+  }
+
   return (
     <main className="max-h-screen bg-background flex flex-col">
       <TopBar title="Edit Page" />
@@ -58,7 +71,7 @@ function Edit() {
         </div>
 
         {/* Settings Sidebar */}
-        <div className="w-[30%] h-full overflow-auto">
+        <div className="w-[30%] h-[80%] overflow-auto">
           <EditingSettingsBar
             brightness={brightness}
             saturation={saturation}
@@ -68,6 +81,23 @@ function Edit() {
             onBlurChange={setBlur}
           />
         </div>
+
+        <button
+        onClick={handleSave}
+        className="
+          fixed bottom-6 right-6
+          px-8 py-3
+          rounded-full
+          font-semibold text-white
+          bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500
+          shadow-lg shadow-purple-500/30
+          hover:scale-105 hover:shadow-xl
+          active:scale-95
+          transition-all duration-200
+          backdrop-blur-md
+        ">
+        Save edits
+      </button>
       </div>
     </main>
   );
