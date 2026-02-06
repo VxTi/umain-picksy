@@ -47,3 +47,43 @@ DEBUGGING BLOCKED TRANSACTIONS
 CAUSES OF BLOCKED TRANSACTIONS
     USER BLOCKS USER
     STILL STUCK?'
+
+## Ditto 101
+Document Model
+
+Copy page
+
+Ditto stores data records as JSON-like documents. Internally these documents are CRDTs, which are a binary representation of JSON documents designed for automatic conflict resolution.
+
+Creating documents
+
+ditto
+  .store()
+  .execute_v2((
+    "INSERT INTO cars DOCUMENTS (:newCar)",
+    serde_json::json!({
+        "newCar": {
+            "color": "blue"
+        }
+    }),
+  )).await?;
+
+Inserting multiple documents
+
+ditto
+  .store()
+  .execute_v2((
+    "INSERT INTO cars DOCUMENTS (:doc1), (:doc2)",
+    serde_json::json!({
+        "doc1": {
+            "color": "blue"
+        },
+        "doc2": {
+            "color": "red"
+        }
+    }),
+  )).await?;
+
+Reading documents
+
+let result = ditto.store().execute_v2("SELECT * FROM cars");

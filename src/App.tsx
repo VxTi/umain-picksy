@@ -1,21 +1,58 @@
-import { analyzeImageMetadata, selectSourceFolder } from './lib/vision';
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import PicksyView from "./PicksyView";
+import {
+  listenToBackendCommands,
+  type BackendCommand,
+  type Photo,
+} from "./backend/commandStream";
+import { getLibraryPhotos } from "./lib/library";
+import { selectSourceFolder } from "./lib/vision";
 
 function App() {
-  async function test() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    const result = await selectSourceFolder();
-    if (result && result.length > 0) {
-      // Example: analyze metadata of the first image
-      const metadata = await Promise.all(result.map(r => analyzeImageMetadata(r)));
-      console.log(metadata);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    listenToBackendCommands((command: BackendCommand) => {
+      if (command.command === "SetLibrary") {
+        setPhotos(command.photos);
+      }
+    })
+      .then((stop) => {
+        unlisten = stop;
+      })
+      .catch((error) => {
+        console.error("Failed to listen for backend commands", error);
+      });
+
+    getLibraryPhotos()
+      .then((initialPhotos) => {
+        setPhotos(initialPhotos);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch library photos", error);
+      });
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, []);
+
+  const handleSelectFolder = useCallback(async () => {
+    try {
+      await selectSourceFolder();
+    } catch (error) {
+      console.error("Failed to select source folder", error);
     }
-  }
+  }, []);
 
   return (
     <main className="container">
-      <PicksyView/>
+      <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
     </main>
   );
 }

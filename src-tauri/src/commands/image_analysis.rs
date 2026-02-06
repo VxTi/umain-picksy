@@ -10,7 +10,6 @@ pub struct ImageMetadata {
     pub model: Option<String>,
 }
 
-
 #[tauri::command]
 pub async fn analyze_image_metadata(path: String) -> Result<ImageMetadata, String> {
     let data = match rexif::parse_file(&path) {
@@ -83,12 +82,8 @@ pub async fn recognize_faces(
     _target_name: String,
     candidate_image_paths: Vec<String>,
 ) -> Result<FaceRecognitionResult, String> {
-    // Platform-specific implementation using Apple's Vision framework via `objc2-vision`.
-    // For now, provide a best-effort basic implementation:
     #[cfg(target_os = "macos")]
     {
-        // Minimal face presence filter: keep candidate images that contain at least one face,
-        // and only if the target image also contains at least one face.
         if !contains_face(&target_image_path)? {
             return Ok(FaceRecognitionResult { matched_paths: vec![] });
         }
@@ -103,7 +98,6 @@ pub async fn recognize_faces(
 
     #[cfg(not(target_os = "macos"))]
     {
-        // Non-Apple platforms: Vision is unavailable. Return empty result.
         Ok(FaceRecognitionResult { matched_paths: vec![] })
     }
 }
@@ -111,12 +105,10 @@ pub async fn recognize_faces(
 #[cfg(all(target_os = "macos", feature = "vision_face_detect"))]
 fn contains_face(path: &str) -> Result<bool, String> {
     use objc2::rc::Retained;
-    use objc2::top_level_traits::AnyThread;
     use objc2_foundation::{NSData, NSDataReadingOptions, NSDictionary, NSString, NSURL};
     use objc2_vision::{VNDetectFaceRectanglesRequest, VNImageRequestHandler, VNRequest};
 
     unsafe {
-        // Load image data via NSData
         let nsurl = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(path), false);
         let data = NSData::initWithContentsOfURL_options_error(
             NSData::alloc(),
@@ -125,7 +117,6 @@ fn contains_face(path: &str) -> Result<bool, String> {
         )
         .map_err(|_| "Failed to read image data".to_string())?;
 
-        // Create a request handler from data
         let opts = NSDictionary::new();
         let handler = VNImageRequestHandler::initWithData_options(
             VNImageRequestHandler::alloc(),
@@ -133,15 +124,12 @@ fn contains_face(path: &str) -> Result<bool, String> {
             &opts,
         );
 
-        // Create face rectangles request
         let req = VNDetectFaceRectanglesRequest::new();
         let mut reqs: [Retained<VNRequest>; 1] = [Retained::cast(req.retain())];
 
-        // Perform request
         let _ = handler.performRequests_error(&mut reqs, std::ptr::null_mut())
             .map_err(|_| "Vision face detection failed".to_string())?;
 
-        // If any results -> faces found
         let results = req.results();
         Ok(results.is_some() && results.unwrap().count() > 0)
     }
@@ -151,4 +139,3 @@ fn contains_face(path: &str) -> Result<bool, String> {
 fn contains_face(_path: &str) -> Result<bool, String> {
     Ok(false)
 }
-

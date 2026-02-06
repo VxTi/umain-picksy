@@ -1,12 +1,12 @@
 mod ditto_repo;
 
-use ditto_repo::{AppAction, AppState, DittoRepository};
+use ditto_repo::{AppAction, AppState, DittoRepository, PhotoPayload};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
-mod vision;
-use vision::{analyze_image_metadata, recognize_faces};
+mod commands;
+use commands::image_analysis::{analyze_image_metadata, recognize_faces};
 
 #[tauri::command]
 async fn select_source_folder(
@@ -59,6 +59,8 @@ async fn select_source_folder(
         })
         .await?;
 
+        repo.upsert_photos_from_paths(&images).await?;
+
         Ok(Some(images))
     } else {
         Ok(None)
@@ -68,6 +70,11 @@ async fn select_source_folder(
 #[tauri::command]
 fn get_app_state(repo: State<'_, DittoRepository>) -> AppState {
     repo.get_state()
+}
+
+#[tauri::command]
+async fn get_library_photos(repo: State<'_, DittoRepository>) -> Result<Vec<PhotoPayload>, String> {
+    repo.get_photos().await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -91,7 +98,8 @@ pub fn run() {
             select_source_folder,
             analyze_image_metadata,
             recognize_faces,
-            get_app_state
+            get_app_state,
+            get_library_photos
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
