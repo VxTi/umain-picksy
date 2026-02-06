@@ -1,31 +1,38 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent }                     from "@/components/ui/card";
+import { FolderIcon, ImagePlusIcon, ImagesIcon } from 'lucide-react';
+import { DispatchWithoutAction } from 'react';
 import type { Photo } from "./backend/commandStream";
 import { openGalleryWindow } from "@/lib/windows";
 
-type PicksyViewProps = {
+interface PicksyViewProps {
   photos: Photo[];
-  onSelectFolder: () => void;
+  onSelectFolder: DispatchWithoutAction
+  onAddPhoto: DispatchWithoutAction
 };
 
 export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="w-[420px] shadow-xl">
+      <Card className="w-105 shadow-xl">
         <CardContent className="flex flex-col items-center gap-6 p-8">
 
-          {/* Logo placeholder */}
           <div className="w-100 h-100 rounded-xl flex items-center justify-center text-sm text-muted-foreground">
             <img src="/picksy_logo_2.png" alt="logo" className="w-100 h-100 object-contain" />
           </div>
 
-          {/* Buttons */}
-          <div className="flex flex-col gap-3 w-full">
+          <div className="flex flex-col gap-2 w-full">
+
             <Button size="lg" className="w-full" onClick={onSelectFolder}>
-              Select folder
+              <ImagePlusIcon/> Add photo
+            </Button>
+
+            <Button size="lg" className="w-full" onClick={onSelectFolder}>
+              <FolderIcon/> Select photo folder
             </Button>
 
             <Button size="lg" variant="outline" className="w-full" onClick={() => openGalleryWindow(photos)}>
+              <ImagesIcon/>
               View Gallery
             </Button>
           </div>

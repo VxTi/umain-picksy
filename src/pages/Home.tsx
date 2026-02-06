@@ -4,11 +4,11 @@ import {
   type BackendCommand,
   type Photo
 } from '@/backend/commandStream';
-import { getLibraryPhotos } from '@/lib/library';
-import { selectSourceFolder, analyzeImageMetadata } from '@/lib/vision';
-import PicksyView from '../PicksyView';
+import { getLibraryPhotos }                                            from '@/lib/library';
+import { selectSourceFolder, analyzeImageMetadata, addPhotoToLibrary } from '@/lib/vision';
+import PicksyView                                                      from '../PicksyView';
 
-function Home() {
+export default function Home() {
   const [ photos, setPhotos ] = useState<Photo[]>([]);
 
   useEffect(() => {
@@ -41,15 +41,13 @@ function Home() {
     };
   }, []);
 
+  const handleAddPhoto = useCallback(async () => {
+    await addPhotoToLibrary();
+  }, []);
+
   const handleSelectFolder = useCallback(async () => {
     try {
-      const result = await selectSourceFolder();
-
-      console.log(result);
-      if (result && result.length > 0) {
-        const metadata = await Promise.all(result.map(r => analyzeImageMetadata(r.image_path)));
-        console.log(metadata);
-      }
+      await selectSourceFolder();
     } catch (error) {
       console.error('Failed to select source folder', error);
     }
@@ -57,9 +55,11 @@ function Home() {
 
   return (
     <main className="container">
-      <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
+      <PicksyView
+        photos={photos}
+        onSelectFolder={handleSelectFolder}
+        onAddPhoto={handleAddPhoto}
+      />
     </main>
   );
 }
-
-export default Home;
