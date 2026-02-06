@@ -10,8 +10,8 @@ import React from "react";
 export interface PhotoLibraryContextType {
 	photos: Readonly<Photo[]>;
 	addPhotosFromFolder: () => Promise<Readonly<Photo[]>>;
-	removePhotoFromLibrary: (photo: Photo) => void;
-	clearLibrary: () => void;
+	removePhotoFromLibrary: (photo: Photo) => Promise<{}>;
+	clearLibrary: () => Promise<{}>;
 	addPhotosToLibrary: () => Promise<Readonly<Photo[]>>;
 }
 
@@ -67,6 +67,7 @@ export function PhotoLibraryProvider({
 					Effect.logError("Failed to listen for SetLibrary", cause),
 				),
 			);
+
 			yield* invoke(CommandType.GET_PHOTOS_FROM_LIBRARY, {}).pipe(
 				Effect.tap((photos) => setPhotos(photos)),
 				Effect.catchAllCause((cause) =>

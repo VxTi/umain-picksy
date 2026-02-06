@@ -210,7 +210,7 @@ fn process_image_file(path: String) -> Result<Photo, String> {
 }
 
 #[tauri::command]
-pub async fn select_images_directory(
+pub async fn add_photos_from_folder(
     app: AppHandle,
     repo: State<'_, DittoRepository>,
 ) -> Result<Option<Vec<Photo>>, String> {
@@ -275,7 +275,7 @@ pub async fn select_images_directory(
 }
 
 #[tauri::command]
-pub async fn add_photo_to_library(
+pub async fn add_photos_to_library(
     app: AppHandle,
     repo: State<'_, DittoRepository>,
 ) -> Result<Option<Vec<Photo>>, String> {

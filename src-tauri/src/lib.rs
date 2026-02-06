@@ -5,13 +5,13 @@ use tauri::{Manager, State};
 
 mod commands;
 
-use commands::image_analysis::{
-    add_photo_to_library,
+use commands::photo_library_commands::{
+    add_photos_to_library,
     analyze_image_metadata,
     recognize_faces,
     clear_library,
     remove_image_from_album,
-    select_images_directory,
+    add_photos_from_folder,
 };
 
 #[tauri::command]
@@ -42,8 +42,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            select_images_directory,
-            add_photo_to_library,
+            add_photos_from_folder,
+            add_photos_to_library,
             analyze_image_metadata,
             recognize_faces,
             clear_library,

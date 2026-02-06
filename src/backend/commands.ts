@@ -23,7 +23,7 @@ const RemovePhotoFromLibraryArgsSchema = Schema.Struct({
 });
 
 export const enum CommandType {
-	ADD_PHOTOS_FROM_FOLDER = "open_folder",
+	ADD_PHOTOS_FROM_FOLDER = "add_photos_from_folder",
 	CLEAR_LIBRARY = "clear_library",
 	ADD_PHOTOS_TO_LIBRARY = "add_photos_to_library",
 	REMOVE_PHOTO_FROM_LIBRARY = "remove_photo_from_library",
