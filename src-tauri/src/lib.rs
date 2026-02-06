@@ -59,6 +59,8 @@ async fn select_source_folder(
         })
         .await?;
 
+        repo.upsert_photos_from_paths(&images).await?;
+
         Ok(Some(images))
     } else {
         Ok(None)

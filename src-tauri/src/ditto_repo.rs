@@ -11,6 +11,8 @@ use tauri::{AppHandle, Manager};
 
 const STATE_COLLECTION: &str = "app_state";
 const STATE_DOC_ID: &str = "root";
+const PHOTOS_COLLECTION: &str = "photos";
+const BACKEND_COMMAND_EVENT: &str = "backend_command";
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AppState {
@@ -30,17 +32,38 @@ struct StoredState {
     state: AppState,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct PhotoDocument {
+    _id: String,
+    filename: String,
+    path: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct PhotoPayload {
+    id: String,
+    filename: String,
+    path: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(tag = "command")]
+enum BackendCommand {
+    SetLibrary { photos: Vec<PhotoPayload> },
+}
+
 pub struct DittoRepository {
     state: Arc<RwLock<AppState>>,
     ditto: Ditto,
     _observer: Arc<StoreObserver>,
+    _photos_observer: Arc<StoreObserver>,
 }
 
 impl DittoRepository {
     pub async fn init(app: &AppHandle) -> Result<Self, String> {
         load_dotenv(app)?;
 
-        let (app_id, playground_token) = read_ditto_env()?;
+        let (app_id, playground_token, auth_url) = read_ditto_env()?;
         let data_dir = app
             .path()
             .app_data_dir()
@@ -56,7 +79,7 @@ impl DittoRepository {
                     AppId::from_str(&app_id)?,
                     playground_token.clone(),
                     true,
-                    None,
+                    Some(&auth_url),
                 )
             })
             .map_err(|e| format!("Failed to configure Ditto identity: {e}"))?
@@ -73,11 +96,14 @@ impl DittoRepository {
         let initial_state = load_state(&ditto).await?;
         let state = Arc::new(RwLock::new(initial_state));
         let observer = install_state_observer(&ditto, state.clone())?;
+        let photos_observer = install_photos_observer(&ditto, app)?;
+        emit_library_snapshot(&ditto, app).await?;
 
         Ok(Self {
             state,
             ditto,
             _observer: observer,
+            _photos_observer: photos_observer,
         })
     }
 
@@ -100,6 +126,54 @@ impl DittoRepository {
 
         persist_state(&self.ditto, &updated).await?;
         Ok(updated)
+    }
+
+    pub async fn upsert_photos_from_paths(&self, image_paths: &[String]) -> Result<(), String> {
+        let store = self.ditto.store();
+        let mut seen = std::collections::HashSet::new();
+
+        for image_path in image_paths {
+            let filename = std::path::Path::new(image_path)
+                .file_name()
+                .map(|name| name.to_string_lossy().to_string())
+                .unwrap_or_else(|| image_path.clone());
+
+            if !seen.insert(filename.clone()) {
+                continue;
+            }
+
+            let update_query = (
+                format!(
+                    "UPDATE {PHOTOS_COLLECTION} SET filename = :filename, path = :path WHERE _id = :id"
+                ),
+                serde_json::json!({
+                    "id": filename.clone(),
+                    "filename": filename.clone(),
+                    "path": image_path,
+                }),
+            );
+            let update_result = store
+                .execute_v2(update_query)
+                .await
+                .map_err(|e| format!("Failed to update Ditto photo: {e}"))?;
+
+            if update_result.item_count() == 0 {
+                let doc = PhotoDocument {
+                    _id: filename.clone(),
+                    filename: filename.clone(),
+                    path: image_path.clone(),
+                };
+                store
+                    .execute_v2((
+                        format!("INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:doc)"),
+                        serde_json::json!({ "doc": doc }),
+                    ))
+                    .await
+                    .map_err(|e| format!("Failed to insert Ditto photo: {e}"))?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -137,14 +211,16 @@ fn load_dotenv(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn read_ditto_env() -> Result<(String, String), String> {
+fn read_ditto_env() -> Result<(String, String, String), String> {
     let app_id = std::env::var("DITTO_APP_ID")
         .or_else(|_| std::env::var("DITTO_DATABASE_ID"))
         .map_err(|_| "Missing DITTO_APP_ID (or DITTO_DATABASE_ID)".to_string())?;
     let playground_token = std::env::var("DITTO_PLAYGROUND_TOKEN")
         .or_else(|_| std::env::var("DITTO_SHARED_TOKEN"))
         .map_err(|_| "Missing DITTO_PLAYGROUND_TOKEN (or DITTO_SHARED_TOKEN)".to_string())?;
-    Ok((app_id, playground_token))
+    let auth_url = std::env::var("DITTO_AUTH_URL")
+        .map_err(|_| "Missing DITTO_AUTH_URL".to_string())?;
+    Ok((app_id, playground_token, auth_url))
 }
 
 async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
@@ -218,5 +294,49 @@ fn install_state_observer(
             }
         })
         .map_err(|e| format!("Failed to register Ditto observer: {e}"))
+}
+
+fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreObserver>, String> {
+    let store = ditto.store();
+    let app_handle = app.clone();
+    let query = format!("SELECT * FROM {PHOTOS_COLLECTION}");
+    store
+        .register_observer_v2(query, move |query_result| {
+            let photos = collect_photo_payloads(&query_result);
+            let command = BackendCommand::SetLibrary { photos };
+            if let Err(error) = emit_backend_command(&app_handle, command) {
+                eprintln!("{error}");
+            }
+        })
+        .map_err(|e| format!("Failed to register photo observer: {e}"))
+}
+
+async fn emit_library_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), String> {
+    let store = ditto.store();
+    let result = store
+        .execute_v2(format!("SELECT * FROM {PHOTOS_COLLECTION}"))
+        .await
+        .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
+    let command = BackendCommand::SetLibrary {
+        photos: collect_photo_payloads(&result),
+    };
+    emit_backend_command(app, command)
+}
+
+fn collect_photo_payloads(query_result: &StoreQueryResult) -> Vec<PhotoPayload> {
+    query_result
+        .iter()
+        .filter_map(|item| item.deserialize_value::<PhotoDocument>().ok())
+        .map(|doc| PhotoPayload {
+            id: doc._id,
+            filename: doc.filename,
+            path: doc.path,
+        })
+        .collect()
+}
+
+fn emit_backend_command(app: &AppHandle, command: BackendCommand) -> Result<(), String> {
+    app.emit_all(BACKEND_COMMAND_EVENT, command)
+        .map_err(|e| format!("Failed to emit backend command: {e}"))
 }
 
