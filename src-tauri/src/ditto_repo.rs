@@ -44,6 +44,8 @@ pub struct Photo {
     pub filename: String,
     pub base64: String,
     pub config: Option<PhotoConfig>,
+    #[serde(default)]
+    pub favorite: bool,
 }
 
 
@@ -76,6 +78,8 @@ struct PhotoDocument {
     #[serde(default)]
     author_peer_id: Option<String>,
     pub config: Option<PhotoConfig>,
+    #[serde(default)]
+    pub favorite: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -100,6 +104,7 @@ pub struct PhotoPayload {
     pub base64: String,
     pub author_peer_id: Option<String>,
     pub config: Option<PhotoConfig>,
+    pub favorite: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -342,6 +347,22 @@ impl DittoRepository {
         Ok(())
     }
 
+    pub async fn update_photo_favorite(
+        &self,
+        id: &str,
+        favorite: bool,
+    ) -> Result<(), String> {
+        let store = self.ditto.store();
+        store
+            .execute_v2((
+                format!("UPDATE {PHOTOS_COLLECTION} SET favorite = :favorite WHERE _id = :id"),
+                serde_json::json!({ "favorite": favorite, "id": id }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to update photo favorite: {e}"))?;
+        Ok(())
+    }
+
     pub async fn emit_library_snapshot(&self, app: &AppHandle) -> Result<(), String> {
         emit_library_snapshot(self.ditto.as_ref(), app).await
     }
@@ -559,6 +580,7 @@ async fn upsert_photos_from_paths_with_ditto(
             base64: image.base64.clone(),
             author_peer_id: Some(author_peer_id.clone()),
             config: image.config.clone(),
+            favorite: image.favorite,
         };
 
         docs.push(doc);
@@ -682,6 +704,7 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
                 base64: doc.base64,
                 author_peer_id: doc.author_peer_id,
                 config: doc.config,
+                favorite: doc.favorite,
             }
         })
         .collect()

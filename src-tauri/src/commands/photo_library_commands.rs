@@ -210,6 +210,7 @@ fn process_image_file(path: String) -> Result<Photo, String> {
         image_path: path,
         base64: base64_content,
         config: None,
+        favorite: false,
     })
 }
 
@@ -378,4 +379,13 @@ pub async fn save_photo_config(
     config: crate::ditto_repo::PhotoConfig,
 ) -> Result<(), String> {
     repo.update_photo_config(&id, config).await
+}
+
+#[tauri::command]
+pub async fn set_photo_favorite(
+    repo: State<'_, DittoRepository>,
+    id: String,
+    favorite: bool,
+) -> Result<(), String> {
+    repo.update_photo_favorite(&id, favorite).await
 }
