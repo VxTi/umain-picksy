@@ -1,15 +1,22 @@
 import { useState } from "react";
 import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import { analyzeImageMetadata, selectSourceFolder } from './lib/vision';
 import "./App.css";
 
 function App() {
   const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
 
-  async function greet() {
+  async function test() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("select_source_folder", { name }));
+    const result = await selectSourceFolder();
+    if (result && result.length > 0) {
+      console.log(result);
+      // Example: analyze metadata of the first image
+      const metadata = await analyzeImageMetadata(result[0]);
+      setGreetMsg(`Selected ${result.length} images. First taken at: ${metadata.datetime ?? 'unknown time'}`);
+    } else if (result) {
+      setGreetMsg("Selected 0 images");
+    }
   }
 
   return (
@@ -33,15 +40,10 @@ function App() {
         className="row"
         onSubmit={(e) => {
           e.preventDefault();
-          greet();
+          test();
         }}
       >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
+        <button type="submit">Select Library</button>
       </form>
       <p>{greetMsg}</p>
     </main>
