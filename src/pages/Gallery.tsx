@@ -5,7 +5,7 @@ import { SyncStatus } from "@/lib/synchronization";
 import { PhotoComponent } from "@/pages/PhotoComponent";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
-import { PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
@@ -30,16 +30,114 @@ export default function Gallery() {
 	const [authorFilter, setAuthorFilter] = useState("all");
 
 	const [selectedImages, setSelectedImages] = useState<Readonly<Photo[]>>([]);
+	const [fullScreenPhoto, setFullScreenPhoto] = useState<Photo | null>(null);
+	const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
 
 	const filteredPhotos =
 		authorFilter === "all"
 			? photos
 			: photos.filter((photo) => photo.author_peer_id === authorFilter);
+	const filteredPhotoIds = useMemo(
+		() => filteredPhotos.map((photo) => photo.id),
+		[filteredPhotos],
+	);
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset selection on filter change
 	useEffect(() => {
 		setSelectedImages([]);
 	}, [authorFilter]);
+
+	useEffect(() => {
+		if (activePhotoId && !filteredPhotoIds.includes(activePhotoId)) {
+			setActivePhotoId(null);
+		}
+	}, [activePhotoId, filteredPhotoIds]);
+
+	useEffect(() => {
+		if (!fullScreenPhoto) return;
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				setFullScreenPhoto(null);
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [fullScreenPhoto]);
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (
+				event.target instanceof HTMLElement &&
+				(event.target.isContentEditable ||
+					["INPUT", "TEXTAREA", "SELECT"].includes(event.target.tagName))
+			) {
+				return;
+			}
+			if (
+				![
+					"ArrowLeft",
+					"ArrowRight",
+					"ArrowUp",
+					"ArrowDown",
+					"Home",
+					"End",
+				].includes(event.key)
+			) {
+				return;
+			}
+			if (filteredPhotos.length === 0) return;
+
+			event.preventDefault();
+
+			const getGridColumns = () => {
+				const width = window.innerWidth;
+				if (width >= 1024) return 4;
+				if (width >= 768) return 3;
+				return 2;
+			};
+
+			const currentId =
+				selectedImages[selectedImages.length - 1]?.id ?? filteredPhotos[0].id;
+			const currentIndex = Math.max(0, filteredPhotoIds.indexOf(currentId));
+			const columns = getGridColumns();
+			let nextIndex = currentIndex;
+
+			switch (event.key) {
+				case "ArrowLeft":
+					nextIndex = currentIndex - 1;
+					break;
+				case "ArrowRight":
+					nextIndex = currentIndex + 1;
+					break;
+				case "ArrowUp":
+					nextIndex = currentIndex - columns;
+					break;
+				case "ArrowDown":
+					nextIndex = currentIndex + columns;
+					break;
+				case "Home":
+					nextIndex = 0;
+					break;
+				case "End":
+					nextIndex = filteredPhotos.length - 1;
+					break;
+			}
+
+			nextIndex = Math.min(Math.max(nextIndex, 0), filteredPhotos.length - 1);
+			const nextPhoto = filteredPhotos[nextIndex];
+			setSelectedImages([nextPhoto]);
+			setActivePhotoId(nextPhoto.id);
+			requestAnimationFrame(() => {
+				const button = document.querySelector<HTMLButtonElement>(
+					`[data-photo-id="${nextPhoto.id}"]`,
+				);
+				button?.focus();
+			});
+		};
+
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [filteredPhotoIds, filteredPhotos, selectedImages]);
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -64,10 +162,41 @@ export default function Gallery() {
 							image={image}
 							selectedImages={selectedImages}
 							setSelectedImages={setSelectedImages}
+							onOpenFullScreen={setFullScreenPhoto}
+							activePhotoId={activePhotoId}
+							setActivePhotoId={setActivePhotoId}
 						/>
 					))}
 				</div>
 			</div>
+			{fullScreenPhoto && (
+				<div
+					className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6"
+					onClick={() => setFullScreenPhoto(null)}
+				>
+					<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80">
+						<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
+							ESC
+						</span>
+						<button
+							type="button"
+							onClick={(event) => {
+								event.stopPropagation();
+								setFullScreenPhoto(null);
+							}}
+							aria-label="Close full screen"
+							className="p-1 text-white/80 transition-colors hover:text-white"
+						>
+							<XIcon className="h-5 w-5" />
+						</button>
+					</div>
+					<img
+						src={fullScreenPhoto.base64}
+						alt={fullScreenPhoto.filename}
+						className="max-h-full max-w-full object-contain"
+					/>
+				</div>
+			)}
 		</main>
 	);
 }
@@ -117,13 +246,14 @@ function GalleryNavigationBar({
 	};
 
 	const onlineCount = presence?.remote_peers.length ?? 0;
-	const onlineLabel = onlineCount > 0 ? `${onlineCount} online` : "Offline";
+	const onlineLabel = onlineCount > 0 ? `${onlineCount + 1} online` : "Offline";
 	const onlineDotClass = onlineCount > 0 ? "bg-emerald-500" : "bg-red-500";
 
 	return (
 		<div className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 py-4">
 			<p className="text-sm text-muted-foreground">
-				Select up to 2 images ({selectedImages.length}/2 selected)
+				Click to select, Shift-click for multi-select ({selectedImages.length}{" "}
+				selected)
 			</p>
 			<div className="relative flex items-center gap-2">
 				<FilterUsers
@@ -248,34 +378,50 @@ function AlbumPhoto({
 	image,
 	selectedImages,
 	setSelectedImages,
+	onOpenFullScreen,
+	activePhotoId,
+	setActivePhotoId,
 }: {
 	image: Photo;
 	selectedImages: Readonly<Photo[]>;
 	setSelectedImages: Dispatch<SetStateAction<Readonly<Photo[]>>>;
+	onOpenFullScreen: (photo: Photo) => void;
+	activePhotoId: string | null;
+	setActivePhotoId: (id: string | null) => void;
 }) {
 	const { setPhotoFavorite } = usePhotoLibrary();
 	const isSelected = useMemo(
 		() => selectedImages.some((img) => img.id === image.id),
 		[image, selectedImages],
 	);
+	const isActive = activePhotoId === image.id;
 	const isFavorite = image.favorite ?? false;
 
 	const handleImageClick = useCallback(
-		(image: Photo) => {
+		(event: MouseEvent<HTMLButtonElement>, image: Photo) => {
+			if (event.shiftKey) {
+				setSelectedImages((prev) => {
+					const isSelected = prev.some((img) => img.id === image.id);
+					return isSelected
+						? prev.filter((img) => img.id !== image.id)
+						: [...prev, image];
+				});
+				setActivePhotoId(image.id);
+				event.currentTarget.focus();
+				return;
+			}
 			setSelectedImages((prev) => {
 				const isSelected = prev.some((img) => img.id === image.id);
 				if (isSelected) {
-					// Deselect if already selected
-					return prev.filter((img) => img.id !== image.id);
-				} else if (prev.length < 2) {
-					// Select if less than 2 images selected
-					return [...prev, image];
+					onOpenFullScreen(image);
+					return prev;
 				}
-				// Max 2 images, don't add more
-				return prev;
+				return [image];
 			});
+			setActivePhotoId(image.id);
+			event.currentTarget.focus();
 		},
-		[setSelectedImages],
+		[onOpenFullScreen, setActivePhotoId, setSelectedImages],
 	);
 
 	const handleFavoriteClick = useCallback(
@@ -293,9 +439,21 @@ function AlbumPhoto({
 		<button
 			type="button"
 			key={image.id}
-			onClick={() => handleImageClick(image)}
+			data-photo-id={image.id}
+			onClick={(event) => handleImageClick(event, image)}
+			onDoubleClick={() => onOpenFullScreen(image)}
+			onFocus={() => setActivePhotoId(image.id)}
+			onMouseEnter={() => setActivePhotoId(image.id)}
+			onMouseLeave={() => {
+				if (!isSelected) {
+					setActivePhotoId(null);
+				}
+			}}
+			tabIndex={isActive ? 0 : -1}
+			aria-current={isActive ? "true" : undefined}
 			className={twMerge(
 				"relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200",
+				isActive ? "bg-primary/10" : "hover:bg-primary/10",
 				isSelected
 					? "border-primary ring-2 ring-primary ring-offset-2"
 					: "border-transparent hover:border-muted-foreground/50",
@@ -312,11 +470,15 @@ function AlbumPhoto({
 			<button
 				type="button"
 				onClick={handleFavoriteClick}
+				onDoubleClick={(event) => {
+					event.preventDefault();
+					event.stopPropagation();
+				}}
 				aria-pressed={isFavorite}
 				aria-label={isFavorite ? "Remove favorite" : "Mark favorite"}
 				className={twMerge(
-					"absolute top-2 right-2 rounded-full p-1.5 transition-colors",
-					isFavorite ? "bg-yellow-400/90 text-black" : "bg-black/50 text-white",
+					"absolute top-2 right-2 p-1 transition-colors",
+					isFavorite ? "text-yellow-400" : "text-white/80 hover:text-white",
 				)}
 			>
 				<StarIcon
@@ -325,7 +487,7 @@ function AlbumPhoto({
 				/>
 			</button>
 			{isSelected && (
-				<div className="absolute top-2 right-10 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+				<div className="absolute top-2 left-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
 					<span className="text-white text-xs font-bold">
 						{selectedImages.findIndex((img) => img.id === image.id) + 1}
 					</span>
