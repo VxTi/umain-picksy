@@ -41,6 +41,7 @@ pub enum AppAction {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AppState {
+    #[serde(default)]
     pub images: Vec<Photo>,
 }
 
