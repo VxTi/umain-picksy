@@ -1,5 +1,7 @@
+import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import {
 	FolderIcon,
 	ImagePlusIcon,
@@ -22,6 +24,7 @@ export default function PicksyView({
 	onAddPhoto,
 	onClearLibrary,
 }: PicksyViewProps) {
+	const { loading } = usePhotoLibrary();
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-background">
 			<Card className="w-105 shadow-xl">
@@ -67,6 +70,12 @@ export default function PicksyView({
 					<p className="text-xs text-muted-foreground">
 						{photos.length} photos in library
 					</p>
+					{loading && (
+						<div>
+							<Spinner />
+							<span>Photos are currently being added to the library.</span>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 		</div>

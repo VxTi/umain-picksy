@@ -26,7 +26,7 @@ interface PresencePayload {
 	remote_peers: PresencePeer[];
 }
 
-function Gallery() {
+export default function Gallery() {
 	const { photos, removePhotoFromLibrary, setPhotos, loading } =
 		usePhotoLibrary();
 
@@ -71,22 +71,11 @@ function Gallery() {
 			? photos
 			: photos.filter((photo) => photo.author_peer_id === authorFilter);
 
-	// Convert Photo[] to ImageItem[] for the gallery
-	const images: ImageItem[] = filteredPhotos.map((photo) => ({
-		id: photo.id,
-		url: photo.base64,
-		title: photo.filename,
-		syncStatus: photo.sync_status ?? "unknown",
-	}));
-
-	const handleImageClick = (image: Photo) => {
-	const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
-
 	useEffect(() => {
 		setSelectedImages([]);
 	}, [authorFilter]);
 
-	const handleImageClick = (image: ImageItem) => {
+	const handleImageClick = (image: Photo) => {
 		setSelectedImages((prev) => {
 			const isSelected = prev.some((img) => img.id === image.id);
 			if (isSelected) {
@@ -251,7 +240,7 @@ function Gallery() {
 					<p className="text-center text-muted-foreground">Loading photos...</p>
 				) : (
 					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-						{photos.map((image) => {
+						{filteredPhotos.map((image) => {
 							const badge = getSyncBadge(image.sync_status);
 							return (
 								<div
@@ -296,5 +285,3 @@ function Gallery() {
 		</main>
 	);
 }
-
-export default Gallery;

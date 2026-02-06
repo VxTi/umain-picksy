@@ -43,23 +43,40 @@ export function PhotoLibraryProvider({
 	const [loading, setLoading] = React.useState<boolean>(false);
 
 	const addPhotosToLibrary = useCallbackEffect(
-		() => invoke(CommandType.ADD_PHOTOS_TO_LIBRARY, {}),
+		() =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(invoke(CommandType.ADD_PHOTOS_TO_LIBRARY, {})),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
 		[],
 	);
 
 	const removePhotoFromLibrary = useCallbackEffect(
 		(photo: Photo) =>
-			invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { photoId: photo.id }),
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(
+					invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { photoId: photo.id }),
+				),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
 		[],
 	);
 
 	const addPhotosFromFolder = useCallbackEffect(
-		() => invoke(CommandType.ADD_PHOTOS_FROM_FOLDER, {}),
+		() =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(invoke(CommandType.ADD_PHOTOS_FROM_FOLDER, {})),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
 		[],
 	);
 
 	const clearLibrary = useCallbackEffect(
-		() => invoke(CommandType.CLEAR_LIBRARY, {}),
+		() =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(invoke(CommandType.CLEAR_LIBRARY, {})),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
 		[],
 	);
 
