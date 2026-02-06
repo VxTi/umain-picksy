@@ -19,14 +19,6 @@ export interface FaceRecognitionResult {
 }
 
 /**
- * Response from selecting a source folder.
- */
-export interface SelectionResponse {
-  path: string;
-  image_count: number;
-}
-
-/**
  * Extracts metadata from an image at the given path.
  * @param path - The absolute path to the image file.
  * @returns A promise that resolves to the image metadata.
@@ -55,9 +47,9 @@ export async function recognizeFaces(
 }
 
 /**
- * Opens a native dialog to select a source folder and returns its path and image count.
- * @returns A promise that resolves to SelectionResponse or null if cancelled.
+ * Opens a native dialog to select a source folder and returns a list of image file paths.
+ * @returns A promise that resolves to a list of image paths or null if cancelled.
  */
-export async function selectSourceFolder(): Promise<SelectionResponse | null> {
-  return await invoke<SelectionResponse | null>("select_source_folder");
+export async function selectSourceFolder(): Promise<string[] | null> {
+  return await invoke<string[] | null>("select_source_folder");
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import reactLogo from "./assets/react.svg";
-import { selectSourceFolder } from "./lib/vision";
+import { analyzeImageMetadata, selectSourceFolder } from './lib/vision';
 import "./App.css";
 
 function App() {
@@ -9,8 +9,13 @@ function App() {
   async function test() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
     const result = await selectSourceFolder();
-    if (result) {
-      setGreetMsg(`Selected ${result.path} with ${result.image_count} images`);
+    if (result && result.length > 0) {
+      console.log(result);
+      // Example: analyze metadata of the first image
+      const metadata = await analyzeImageMetadata(result[0]);
+      setGreetMsg(`Selected ${result.length} images. First taken at: ${metadata.datetime ?? 'unknown time'}`);
+    } else if (result) {
+      setGreetMsg("Selected 0 images");
     }
   }
 

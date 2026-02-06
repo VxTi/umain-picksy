@@ -1,4 +1,3 @@
-use serde::Serialize;
 use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
@@ -6,19 +5,13 @@ use walkdir::WalkDir;
 mod vision;
 use vision::{analyze_image_metadata, recognize_faces};
 
-#[derive(Serialize)]
-pub struct SelectionResponse {
-    path: String,
-    image_count: usize,
-}
-
 #[tauri::command]
-async fn select_source_folder(app: AppHandle) -> Result<Option<SelectionResponse>, String> {
+async fn select_source_folder(app: AppHandle) -> Result<Option<Vec<String>>, String> {
     use tauri_plugin_dialog::FilePath;
     use tauri_plugin_store::StoreExt;
-    
+
     let (tx, rx) = std::sync::mpsc::channel();
-    
+
     app.dialog().file().pick_folder(move |path| {
         tx.send(path).unwrap();
     });
@@ -28,20 +21,21 @@ async fn select_source_folder(app: AppHandle) -> Result<Option<SelectionResponse
     if let Some(folder_path) = folder {
         let path_str = match folder_path {
             FilePath::Path(p) => p.to_string_lossy().to_string(),
-            FilePath::Url(u) => u.to_file_path().map_err(|_| "Invalid URL".to_string())?.to_string_lossy().to_string(),
+            FilePath::Url(u) => u
+                .to_file_path()
+                .map_err(|_| "Invalid URL".to_string())?
+                .to_string_lossy()
+                .to_string(),
         };
-        
-        let mut image_count = 0;
+
+        let mut images: Vec<String> = Vec::new();
 
         for entry in WalkDir::new(&path_str).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 if let Some(ext) = entry.path().extension() {
                     let ext = ext.to_string_lossy().to_lowercase();
-                    if matches!(
-                        ext.as_str(),
-                        "jpg" | "jpeg" | "png" | "heic" | "webp" | "tiff"
-                    ) {
-                        image_count += 1;
+                    if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "heic" | "webp" | "tiff") {
+                        images.push(entry.path().to_string_lossy().to_string());
                     }
                 }
             }
@@ -52,10 +46,7 @@ async fn select_source_folder(app: AppHandle) -> Result<Option<SelectionResponse
         store.set("library_path", serde_json::Value::String(path_str.clone()));
         store.save().map_err(|e| e.to_string())?;
 
-        Ok(Some(SelectionResponse {
-            path: path_str,
-            image_count,
-        }))
+        Ok(Some(images))
     } else {
         Ok(None)
     }

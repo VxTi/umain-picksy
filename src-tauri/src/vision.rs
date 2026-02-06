@@ -12,12 +12,22 @@ pub struct ImageMetadata {
 #[tauri::command]
 pub async fn analyze_image_metadata(path: String) -> Result<ImageMetadata, String> {
     // Fallback EXIF parsing using the `rexif` crate for portability.
-    // On Apple platforms, a Vision/ImageIO-based implementation can replace/augment this.
+    // If parsing fails (e.g., PNG without EXIF), return empty metadata instead of an error.
     let data = match rexif::parse_file(&path) {
-        Ok(d) => d,
-        Err(e) => {
-            return Err(format!("Failed to parse metadata: {e}"));
-        }
+        Ok(d) => Some(d),
+        Err(_e) => None,
+    };
+
+    let mut out = ImageMetadata {
+        datetime: None,
+        latitude: None,
+        longitude: None,
+        make: None,
+        model: None,
+    };
+
+    let Some(data) = data else {
+        return Ok(out);
     };
 
     let mut out = ImageMetadata {
@@ -148,3 +158,4 @@ fn contains_face(path: &str) -> Result<bool, String> {
 fn contains_face(_path: &str) -> Result<bool, String> {
     Ok(false)
 }
+
