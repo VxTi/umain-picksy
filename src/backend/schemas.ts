@@ -3,15 +3,15 @@ import { Schema } from "effect";
 export const OrientationSchema = Schema.String;
 
 export const MetadataSchema = Schema.Struct({
-  width: Schema.Int,
-  height: Schema.Int,
-  focalLength: Schema.String,
-  orientation: OrientationSchema,
-  cameraModel: Schema.String,
-  creationDate: Schema.Date,
-  modificationDate: Schema.Date,
+	width: Schema.Int,
+	height: Schema.Int,
+	focalLength: Schema.String,
+	orientation: OrientationSchema,
+	cameraModel: Schema.String,
+	creationDate: Schema.Date,
+	modificationDate: Schema.Date,
 }).pipe(
-  Schema.extend(Schema.Record({ key: Schema.String, value: Schema.Unknown })),
+	Schema.extend(Schema.Record({ key: Schema.String, value: Schema.Unknown })),
 );
 
 export const PhotoSchema = Schema.Struct({
@@ -20,7 +20,7 @@ export const PhotoSchema = Schema.Struct({
 	image_path: Schema.String,
 	filename: Schema.String,
 	metadata: Schema.optional(MetadataSchema),
-  sync_status: Schema.String,
+	sync_status: Schema.String,
 });
 
 export type Photo = Schema.Schema.Type<typeof PhotoSchema>;
