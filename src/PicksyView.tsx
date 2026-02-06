@@ -45,7 +45,7 @@ export default function PicksyView({
               onClick={() => openGalleryWindow(photos)}
             >
               <ImagesIcon />
-              View Gallery
+              View Library
             </Button>
           </div>
 

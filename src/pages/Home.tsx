@@ -32,7 +32,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="container">
+    <main className="container bg-gray-100 min-h-screen">
       <PicksyView
         photos={photos}
         onSelectFolder={handleSelectFolder}
