@@ -177,7 +177,7 @@ impl DittoRepository {
 
         ditto.update_transport_config(|transport_config| {
             transport_config.enable_all_peer_to_peer();
-            transport_config.global.sync_group = 0; // all users in 1 big pool!
+            transport_config.global.sync_group = 1; // all users in 1 big pool!
             transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
@@ -335,6 +335,10 @@ impl DittoRepository {
         self.dispatch(AppAction::ClearImageLibraryContent).await?;
         Ok(())
     }
+
+    pub async fn emit_library_snapshot(&self, app: &AppHandle) -> Result<(), String> {
+        emit_library_snapshot(self.ditto.as_ref(), app).await
+    }
 }
 
 impl AppState {
@@ -465,9 +469,9 @@ fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreOb
     let query = format!("SELECT * FROM {PHOTOS_COLLECTION}");
     store
         .register_observer_v2(query, move |query_result| {
+            println!("<=== Emitting SetLibrary");
             let photos = collect_photo_payloads(&query_result);
             let payload: SetLibraryPayload = SetLibraryPayload { photos };
-            println!("<=== Emitting SetLibrary: {:#?}", payload);
             if let Err(error) = app_handle.emit(SET_LIBRARY_EVENT, payload) {
                 eprintln!("{error}");
             }
@@ -500,7 +504,7 @@ async fn emit_library_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), Str
     let payload = SetLibraryPayload {
         photos: collect_photo_payloads(&result),
     };
-    println!("<=== Emitting SetLibrary: {:#?}", payload);
+    println!("<=== Emitting SetLibrary");
     app.emit(SET_LIBRARY_EVENT, payload)
         .map_err(|e| format!("Failed to emit SetLibrary: {e}"))
 }

@@ -1,7 +1,6 @@
 use crate::ditto_repo::{AppAction, DittoRepository, Photo};
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
-use image::GenericImage;
 use rexif::{ExifTag, TagValue};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
@@ -199,23 +198,10 @@ pub async fn remove_image_from_album(
 }
 
 fn process_image_file(path: String) -> Result<Photo, String> {
-    let start = Instant::now();
-    println!("Import: processing image file: {}", path.clone());
-    let step = Instant::now();
     let img = image::open(&path).map_err(|e| e.to_string())?;
-    println!("Import: image opened ({:?})", step.elapsed());
-    println!("dims = {:?}", img.to_rgba8().dimensions());
-    println!("color = {:?}", img.color());
-    let step = Instant::now();
     let id = generate_image_id(&img);
-    println!("Import: image id generated ({:?})", step.elapsed());
-    let step = Instant::now();
     let thumbnail = img.thumbnail(300, 300);
-    println!("Import: thumbnail generated ({:?})", step.elapsed());
-    let step = Instant::now();
     let base64_content = image_to_base64(&thumbnail, ImageFormat::Jpeg);
-    println!("Import: base64 content generated ({:?})", step.elapsed());
-    println!("Import: image processing total ({:?})", start.elapsed());
     Ok(Photo {
         id,
         image_path: path,
@@ -230,7 +216,6 @@ pub async fn select_images_directory(
     repo: State<'_, DittoRepository>,
 ) -> Result<Option<Vec<Photo>>, String> {
     use tauri_plugin_dialog::FilePath;
-    use tauri_plugin_store::StoreExt;
     use std::time::Instant;
 
     let (tx, rx) = std::sync::mpsc::channel();
@@ -273,21 +258,11 @@ pub async fn select_images_directory(
                         let path = entry.path().to_string_lossy().to_string();
 
                         if let Ok(photo) = process_image_file(path) {
-                            println!("Import: processed image file: {}", entry.path().to_string_lossy());
                             images.push(photo.clone());
                             pending.push(photo);
                             processed_count += 1;
                             if pending.len() >= UPSERT_BATCH_SIZE {
-                                let batch_start = Instant::now();
-                                println!("Import: upserting batch of {} photos", pending.len());
                                 repo.upsert_photos_from_paths(&pending).await?;
-                                println!(
-                                    "Import: upserted batch of {} photos ({} total processed) in {:?}",
-                                    UPSERT_BATCH_SIZE,
-                                    processed_count,
-                                    batch_start.elapsed()
-                                );
-                                println!("Import: cleared pending photos");
                                 pending.clear();
                             }
                         }
@@ -307,15 +282,7 @@ pub async fn select_images_directory(
             );
         }
 
-        // Persist the path
-        let store = app.store("config.json").map_err(|e| e.to_string())?;
-        store.set("library_path", serde_json::Value::String(path_str.clone()));
-        store.save().map_err(|e| e.to_string())?;
-
-        repo.dispatch(AppAction::SetImageLibraryContent {
-            images: images.clone(),
-        })
-        .await?;
+        repo.emit_library_snapshot(&app).await?;
 
         println!(
             "Import: finished dispatch for {} photos in {:?}",
@@ -393,6 +360,7 @@ pub async fn add_photo_to_library(
             images: current_state.images,
         })
         .await?;
+        repo.emit_library_snapshot(&app).await?;
 
         Ok(Some(photos))
     } else {
