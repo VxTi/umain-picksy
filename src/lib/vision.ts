@@ -1,5 +1,6 @@
 import { CommandType, Result } from "@/backend/commands";
 import { invoke, InvokeError } from "@/backend/invoke";
+import { Photo } from "@/backend/schemas";
 import { invoke as invokeTauri } from "@tauri-apps/api/core";
 import { Effect } from "effect/Effect";
 

@@ -31,6 +31,7 @@ function Gallery() {
 	const [presence, setPresence] = useState<PresencePayload | null>(null);
 	const [showPeers, setShowPeers] = useState(false);
 	const [pinnedPeers, setPinnedPeers] = useState(false);
+	const [authorFilter, setAuthorFilter] = useState("all");
 
 	// Listen for photos from the main window via events
 	useEffect(() => {
@@ -63,8 +64,28 @@ function Gallery() {
 		};
 	}, []);
 
+	const resolvePeerLabel = (peerId: string) => {
+		if (presence?.local_peer.peer_key === peerId) {
+			return `You (${localPeerName})`;
+		}
+		const peer = presence?.remote_peers.find((p) => p.peer_key === peerId);
+		if (!peer) {
+			return `${peerId.slice(0, 8)}...`;
+		}
+		return (
+			(peer.metadata?.name as string | undefined) ??
+			peer.device_name ??
+			peer.peer_key
+		);
+	};
+
+	const filteredPhotos =
+		authorFilter === "all"
+			? photos
+			: photos.filter((photo) => photo.author_peer_id === authorFilter);
+
 	// Convert Photo[] to ImageItem[] for the gallery
-	const images: ImageItem[] = photos.map((photo) => ({
+	const images: ImageItem[] = filteredPhotos.map((photo) => ({
 		id: photo.id,
 		url: photo.base64,
 		title: photo.filename,
@@ -72,6 +93,10 @@ function Gallery() {
 	}));
 
 	const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
+
+	useEffect(() => {
+		setSelectedImages([]);
+	}, [authorFilter]);
 
 	const handleImageClick = (image: ImageItem) => {
 		setSelectedImages((prev) => {
@@ -141,6 +166,24 @@ function Gallery() {
 						Select up to 2 images ({selectedImages.length}/2 selected)
 					</p>
 					<div className="relative flex items-center gap-2">
+						<select
+							className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+							value={authorFilter}
+							onChange={(event) => setAuthorFilter(event.target.value)}
+						>
+							<option value="all">All authors</option>
+							{Array.from(
+								new Set(
+									photos
+										.map((photo) => photo.author_peer_id)
+										.filter((id): id is string => Boolean(id)),
+								),
+							).map((authorId) => (
+								<option key={authorId} value={authorId}>
+									{resolvePeerLabel(authorId)}
+								</option>
+							))}
+						</select>
 						<div
 							onMouseEnter={() => setShowPeers(true)}
 							onMouseLeave={() => {
@@ -208,7 +251,7 @@ function Gallery() {
 												>
 													<span>{displayName}</span>
 													<span className="text-xs text-muted-foreground">
-														{peer.peer_key}
+														{peer.peer_key.slice(0, 8)}...
 													</span>
 												</div>
 											);
