@@ -1,5 +1,4 @@
 import { Slider } from "@/components/ui/slider";
-import { Card, CardContent } from "@/components/ui/card";
 import { BlendIcon, DropletIcon, SunIcon } from "lucide-react";
 
 type Props = {
@@ -26,64 +25,47 @@ export default function PhotoEditorSidebar({
 	//onGrayscaleChange
 }: Props) {
 	return (
-		<div className="w-87.5 py-2 border-l flex flex-col">
-			<div className="h-full w-full p-6 flex flex-col gap-2 rounded-l-xl border-t grow border-l border-b border-border overflow-y-auto">
-				{/* Brightness */}
-				<Card className="w-full rounded-2xl">
-					<CardContent className="p-6 space-y-4">
-						<div className="space-y-2">
-							<div className="text-sm font-medium flex items-center gap-1">
-								<SunIcon className="size-4" />
-								Brightness: {brightness}%
-							</div>
-							<Slider
-								value={[brightness]}
-								onValueChange={(v) => onBrightnessChange(v[0])}
-								min={0}
-								max={200}
-								step={1}
-							/>
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Saturation */}
-				<Card className="w-full rounded-2xl">
-					<CardContent className="p-6 space-y-4">
-						<div className="space-y-2">
-							<div className="text-sm font-medium flex items-center gap-1">
-								<BlendIcon className="size-4" />
-								Saturation: {saturation}%
-							</div>
-							<Slider
-								value={[saturation]}
-								onValueChange={(v) => onSaturationChange(v[0])}
-								min={0}
-								max={200}
-								step={1}
-							/>
-						</div>
-					</CardContent>
-				</Card>
-
-				{/* Blur */}
-				<Card className="w-full rounded-2xl">
-					<CardContent className="p-6 space-y-4">
-						<div className="space-y-2">
-							<div className="text-sm font-medium flex items-center gap-1">
-								<DropletIcon className="size-4" />
-								Blur: {blur}px
-							</div>
-							<Slider
-								value={[blur]}
-								onValueChange={(v) => onBlurChange(v[0])}
-								min={0}
-								max={10}
-								step={1}
-							/>
-						</div>
-					</CardContent>
-				</Card>
+		<div className="w-87.5 py-2 flex flex-col">
+			<div className="h-full w-full p-6 flex flex-col bg-background space-y-6 rounded-l-xl border-t grow border-l border-b border-border overflow-y-auto">
+				<div className="space-y-2">
+					<div className="text-sm font-medium flex items-center gap-1">
+						<SunIcon className="size-4" />
+						Brightness: {brightness}%
+					</div>
+					<Slider
+						value={[brightness]}
+						onValueChange={(v) => onBrightnessChange(v[0])}
+						min={0}
+						max={200}
+						step={1}
+					/>
+				</div>
+				<div className="space-y-2">
+					<div className="text-sm font-medium flex items-center gap-1">
+						<BlendIcon className="size-4" />
+						Saturation: {saturation}%
+					</div>
+					<Slider
+						value={[saturation]}
+						onValueChange={(v) => onSaturationChange(v[0])}
+						min={0}
+						max={200}
+						step={1}
+					/>
+				</div>
+				<div className="space-y-2">
+					<div className="text-sm font-medium flex items-center gap-1">
+						<DropletIcon className="size-4" />
+						Blur: {blur}px
+					</div>
+					<Slider
+						value={[blur]}
+						onValueChange={(v) => onBlurChange(v[0])}
+						min={0}
+						max={10}
+						step={1}
+					/>
+				</div>
 			</div>
 		</div>
 	);

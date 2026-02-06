@@ -16,12 +16,7 @@ export const PhotoComponent: React.FC<ImageViewProps> = ({
 	const filter = `brightness(${brightness ?? 100}%) saturate(${saturation ?? 50}%) blur(${blur ?? 0}px)`;
 	return (
 		<div
-			style={{
-				maxHeight: "70%",
-				maxWidth: "70%",
-				overflow: "hidden",
-				display: "inline-block",
-			}}
+			className='overflow-hidden  size-full flex items-center justify-center'
 		>
 			<img
 				src={src}

@@ -123,8 +123,8 @@ function PhotoEditor() {
 							className={twMerge(
 								"flex-1 h-full flex flex-col items-center justify-center transition-all duration-300",
 								editingPhotos.length > 1 && activeImageIndex === i
-									? "opacity-50 scale-95"
-									: "opacity-100 scale-100",
+									? "opacity-100 scale-100"
+									: "opacity-50 scale-90",
 							)}
 						>
 							<PhotoComponent
