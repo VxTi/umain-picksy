@@ -13,7 +13,7 @@ use tauri::{AppHandle, Emitter, Manager};
 const STATE_COLLECTION: &str = "app_state";
 const STATE_DOC_ID: &str = "root";
 const PHOTOS_COLLECTION: &str = "photos";
-const BACKEND_COMMAND_EVENT: &str = "backend_command";
+const SET_LIBRARY_EVENT: &str = "SetLibrary";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ImageMetadata {
@@ -68,9 +68,8 @@ pub struct PhotoPayload {
 }
 
 #[derive(Clone, Debug, Serialize)]
-#[serde(tag = "command")]
-enum BackendCommand {
-    SetLibrary { photos: Vec<PhotoPayload> },
+struct SetLibraryPayload {
+    photos: Vec<PhotoPayload>,
 }
 
 pub struct DittoRepository {
@@ -318,8 +317,8 @@ fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreOb
     store
         .register_observer_v2(query, move |query_result| {
             let photos = collect_photo_payloads(&query_result);
-            let command = BackendCommand::SetLibrary { photos };
-            if let Err(error) = emit_backend_command(&app_handle, command) {
+            let payload = SetLibraryPayload { photos };
+            if let Err(error) = app_handle.emit(SET_LIBRARY_EVENT, payload) {
                 eprintln!("{error}");
             }
         })
@@ -332,10 +331,11 @@ async fn emit_library_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), Str
         .execute_v2(format!("SELECT * FROM {PHOTOS_COLLECTION}"))
         .await
         .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
-    let command = BackendCommand::SetLibrary {
+    let payload = SetLibraryPayload {
         photos: collect_photo_payloads(&result),
     };
-    emit_backend_command(app, command)
+    app.emit(SET_LIBRARY_EVENT, payload)
+        .map_err(|e| format!("Failed to emit SetLibrary: {e}"))
 }
 
 fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
@@ -351,8 +351,4 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
         .collect()
 }
 
-fn emit_backend_command(app: &AppHandle, command: BackendCommand) -> Result<(), String> {
-    app.emit(BACKEND_COMMAND_EVENT, command)
-        .map_err(|e| format!("Failed to emit backend command: {e}"))
-}
 

@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import type { Photo } from "./backend/commandStream";
+import { SetLibraryResult } from "./backend/events";
 
 type PicksyViewProps = {
-  photos: Photo[];
+  photos: SetLibraryResult["photos"];
   onSelectFolder: () => void;
 };
 
@@ -40,7 +40,7 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
             {photos.map((photo, index) => (
               <img
                 key={photo.id ?? index}
-                src={photo.base64}
+                src={photo.base64 }
                 alt={photo.filename}
                 className="h-20 w-full rounded object-cover"
                 loading="lazy"

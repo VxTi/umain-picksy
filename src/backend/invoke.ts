@@ -1,6 +1,7 @@
 import { invoke as invokeCore, type InvokeArgs } from "@tauri-apps/api/core";
 import { Data, Effect, ParseResult, Schema } from "effect";
-import { Args, Command, CommandSchemas, Result } from "./commands";
+import type { Args, Command, Result } from "./commands";
+import { CommandSchemas } from "./commands";
 
 /** Base type: any error produced by invoke */
 export type InvokeError = InvokeFailedError | BackendUnexpectedDataError;
@@ -25,7 +26,7 @@ export const invoke = <C extends Command>(
       try: () => invokeCore(command, args as InvokeArgs),
       catch: (error) => new InvokeFailedError({ cause: error }),
     });
-    const decoded = yield* Schema.decodeUnknown(resultSchema)(raw).pipe(
+    const decoded = yield* Schema.decodeUnknown(resultSchema as unknown as Schema.Schema<Result<C>, unknown>)(raw).pipe(
       Effect.mapError((e) =>
         new BackendUnexpectedDataError({
           cause: ParseResult.TreeFormatter.formatErrorSync(e),

@@ -5,12 +5,16 @@ type EventEntry = {
   result: Schema.Schema<any, any, any>;
 };
 
-const SetPhotosResultSchema = Schema.Struct({
+const SetLibraryResultSchema = Schema.Struct({
   photos: Schema.Array(PhotoSchema),
 });
+export type SetLibraryResult = Schema.Schema.Type<
+  typeof SetLibraryResultSchema
+>;
+
 export const EventsSchemas = {
-  set_photos: {
-    result: SetPhotosResultSchema,
+  SetLibrary: {
+    result: SetLibraryResultSchema,
   },
 } as const satisfies Record<string, EventEntry>;
 
