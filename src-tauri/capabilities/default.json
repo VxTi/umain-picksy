@@ -7,7 +7,7 @@
   ],
   "permissions": [
     "fs:read-files",
-    "fs:scope-home",
+    "fs:scope-home-recursive",
     "fs:allow-exists",
     "core:default",
     "opener:default",

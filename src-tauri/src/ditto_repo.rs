@@ -1,13 +1,14 @@
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
+use dittolive_ditto::dql::QueryResult;
 use dittolive_ditto::fs::PersistentRoot;
 use dittolive_ditto::identity;
 use dittolive_ditto::prelude::*;
 use dittolive_ditto::store::StoreObserver;
 use serde::{Deserialize, Serialize};
 use tauri::path::BaseDirectory;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 const STATE_COLLECTION: &str = "app_state";
 const STATE_DOC_ID: &str = "root";
@@ -39,11 +40,11 @@ struct PhotoDocument {
     path: String,
 }
 
-#[derive(Clone, Debug, Serialize)]
-struct PhotoPayload {
-    id: String,
-    filename: String,
-    path: String,
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PhotoPayload {
+    pub id: String,
+    pub filename: String,
+    pub path: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -174,6 +175,15 @@ impl DittoRepository {
         }
 
         Ok(())
+    }
+
+    pub async fn get_photos(&self) -> Result<Vec<PhotoPayload>, String> {
+        let store = self.ditto.store();
+        let result = store
+            .execute_v2(format!("SELECT * FROM {PHOTOS_COLLECTION}"))
+            .await
+            .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
+        Ok(collect_photo_payloads(&result))
     }
 }
 
@@ -323,7 +333,7 @@ async fn emit_library_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), Str
     emit_backend_command(app, command)
 }
 
-fn collect_photo_payloads(query_result: &StoreQueryResult) -> Vec<PhotoPayload> {
+fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
     query_result
         .iter()
         .filter_map(|item| item.deserialize_value::<PhotoDocument>().ok())
@@ -336,7 +346,7 @@ fn collect_photo_payloads(query_result: &StoreQueryResult) -> Vec<PhotoPayload> 
 }
 
 fn emit_backend_command(app: &AppHandle, command: BackendCommand) -> Result<(), String> {
-    app.emit_all(BACKEND_COMMAND_EVENT, command)
+    app.emit(BACKEND_COMMAND_EVENT, command)
         .map_err(|e| format!("Failed to emit backend command: {e}"))
 }
 

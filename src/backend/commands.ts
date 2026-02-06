@@ -6,14 +6,9 @@ type CommandEntry = {
   result: Schema.Schema<any, any, any>;
 };
 
-const PhotoSchema = Schema.Struct({
-  path: Schema.String,
-  content: Schema.Uint8ArrayFromBase64,
-});
+
 const OpenFolderArgsSchema = Schema.Struct({ folder: Schema.String });
-const OpenFolderResultSchema = Schema.Struct({
-  photos: Schema.Array(PhotoSchema),
-});
+const OpenFolderResultSchema = Schema.Struct({});
 
 export const CommandSchemas = {
   open_folder: {
