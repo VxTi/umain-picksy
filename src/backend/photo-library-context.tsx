@@ -1,8 +1,8 @@
 import { CommandType } from "@/backend/commands";
 import { SetLibraryResult } from "@/backend/events";
 import { invoke } from "@/backend/invoke";
-import { listen }                             from "@/backend/listen";
-import { Photo, PhotoConfig } from '@/backend/schemas';
+import { listen } from "@/backend/listen";
+import { Photo, PhotoConfig } from "@/backend/schemas";
 import { useCallbackEffect, useEffectEffect } from "@/effect-react";
 import { Effect } from "effect";
 import React, { Dispatch, SetStateAction } from "react";

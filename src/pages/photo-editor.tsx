@@ -11,14 +11,16 @@ import PhotoEditorSidebar from "../components/photo-editor-sidebar";
 import { PhotoComponent } from "./PhotoComponent";
 
 function PhotoEditor() {
-	const { photos, setPhotos, saveImageConfig } = usePhotoLibrary();
+	const { saveImageConfig } = usePhotoLibrary();
 	const navigate = useNavigate();
+
+	const [editingPhotos, setEditingPhotos] = useState<Readonly<Photo[]>>([]);
 
 	// Listen for images from the gallery window via events
 	useEffect(() => {
 		const unlisten = listen<Photo[]>(EventType.EDIT_IMAGES, (event) => {
 			console.log("Edit received images via event:", event.payload.length);
-			setPhotos(event.payload);
+			setEditingPhotos(event.payload);
 		});
 
 		return () => {
@@ -26,87 +28,60 @@ function PhotoEditor() {
 		};
 	}, []);
 
-	const image1 = photos[0];
-	const image2 = photos[1];
-
-	// editing state for image 1
-	const [brightness1, setBrightness1] = useState(100);
-	const [blur1, setBlur1] = useState(0);
-	const [saturation1, setSaturation1] = useState(100);
-
-	// editing state for image 2
-	const [brightness2, setBrightness2] = useState(100);
-	const [blur2, setBlur2] = useState(0);
-	const [saturation2, setSaturation2] = useState(100);
-
-	// Initialize state from photos
-	useEffect(() => {
-		if (image1) {
-			setBrightness1(image1.config?.brightness ?? 100);
-			setBlur1(image1.config?.blur ?? 0);
-			setSaturation1(image1.config?.saturation ?? 100);
-		}
-		if (image2) {
-			setBrightness2(image2.config?.brightness ?? 100);
-			setBlur2(image2.config?.blur ?? 0);
-			setSaturation2(image2.config?.saturation ?? 100);
-		}
-	}, [image1?.id, image2?.id]);
-
 	const [activeImageIndex, setActiveImageIndex] = useState(0);
 
 	const handleSave = async () => {
-		if (image1) {
-			console.log(
-				`Image 1 (${image1.id}) edits: blur=${blur1}, brightness=${brightness1}, saturation=${saturation1}`,
-			);
-			await saveImageConfig(image1.id, {
-				brightness: brightness1,
-				saturation: saturation1,
-				blur: blur1,
-			});
-		}
-		if (image2) {
-			console.log(
-				`Image 2 (${image2.id}) edits: blur=${blur2}, brightness=${brightness2}, saturation=${saturation2}`,
-			);
-			await saveImageConfig(image2.id, {
-				brightness: brightness2,
-				saturation: saturation2,
-				blur: blur2,
+		for (const photo of editingPhotos) {
+			await saveImageConfig(photo.id, {
+				brightness: photo.config?.brightness ?? 100,
+				saturation: photo.config?.saturation ?? 100,
+				blur: photo.config?.blur ?? 0,
 			});
 		}
 	};
 
-	const isDouble = photos.length === 2;
+	const onBrightnessChange = (brightness: number) => {
+		const photo = editingPhotos[activeImageIndex];
+		if (!photo) return;
+		void saveImageConfig(photo.id, { brightness });
+	};
+
+	const onSaturationChange = (saturation: number) => {
+		const photo = editingPhotos[activeImageIndex];
+		if (!photo) return;
+		void saveImageConfig(photo.id, { saturation });
+	};
+
+	const onBlurChange = (blur: number) => {
+		const photo = editingPhotos[activeImageIndex];
+		if (!photo) return;
+		void saveImageConfig(photo.id, { blur });
+	};
+
+	const hasEditablePhotos = editingPhotos.length > 0;
 
 	return (
 		<main className="h-screen bg-background flex flex-col overflow-hidden">
 			<div className="p-4 shrink-0">
 				<div className="flex items-center justify-between">
 					<p className="text-sm text-muted-foreground">
-						{photos.length > 0
-							? `${photos.length} image(s) selected for editing`
+						{hasEditablePhotos
+							? `${editingPhotos.length} image(s) selected for editing`
 							: "No images selected"}
 					</p>
 
 					<div className="flex gap-2">
-						{isDouble && (
+						{editingPhotos.length > 1 && (
 							<div className="flex bg-muted rounded-lg p-1">
-								<Button
-									variant={activeImageIndex === 0 ? "default" : "ghost"}
-									size="sm"
-									onClick={() => setActiveImageIndex(0)}
-								>
-									Image 1
-								</Button>
-								<Button
-									variant={activeImageIndex === 1 ? "default" : "ghost"}
-									size="sm"
-									onClick={() => setActiveImageIndex(1)}
-								>
-									Image 2
-								</Button>
+								{editingPhotos.map((_, i) => (
+									<Button
+										variant={activeImageIndex === i ? "default" : "ghost"}
+										size="sm"
+										onClick={() => setActiveImageIndex(i)}
+									>
+										Image {i + 1}
+									</Button>
+								))}
 							</div>
 						)}
 						<Button
@@ -115,7 +90,7 @@ function PhotoEditor() {
 						>
 							<SaveIcon className="size-4" /> Save edits
 						</Button>
-						{photos.length === 0 && (
+						{!hasEditablePhotos && (
 							<Button variant="outline" onClick={() => navigate("/gallery")}>
 								Go to Gallery
 							</Button>
@@ -127,63 +102,46 @@ function PhotoEditor() {
 			<div className="flex flex-1 overflow-hidden bg-black/5">
 				{/* Image Preview Area */}
 				<div className="flex-1 flex justify-center items-center  p-4 gap-4 overflow-hidden flex-wrap *:basis-50">
-					{image1 && (
+					{editingPhotos.map((photo, i) => (
 						<div
 							className={twMerge(
 								"flex-1 h-full flex flex-col items-center justify-center transition-all duration-300",
-								isDouble && activeImageIndex === 1
+								editingPhotos.length > 1 && activeImageIndex === i
 									? "opacity-50 scale-95"
 									: "opacity-100 scale-100",
 							)}
 						>
 							<PhotoComponent
-								src={image1.base64}
-								alt={image1.filename}
-								brightness={brightness1}
-								blur={blur1}
-								saturation={saturation1}
+								src={photo.base64}
+								alt={photo.filename}
+								brightness={photo.config?.brightness ?? 100}
+								blur={photo.config?.blur ?? 0}
+								saturation={photo.config?.saturation ?? 100}
 							/>
-							{isDouble && (
+							{editingPhotos.length > 1 && (
 								<span className="mt-2 text-xs font-medium text-muted-foreground">
-									Image 1
+									Image {i}
 								</span>
 							)}
 						</div>
-					)}
+					))}
 
-					{image2 && (
-						<div
-							className={`flex-1 h-full flex flex-col items-center justify-center transition-all duration-300 ${activeImageIndex === 0 ? "opacity-50 scale-95" : "opacity-100 scale-100"}`}
-						>
-							<PhotoComponent
-								src={image2.base64}
-								alt={image2.filename}
-								brightness={brightness2}
-								blur={blur2}
-								saturation={saturation2}
-							/>
-							<span className="mt-2 text-xs font-medium text-muted-foreground">
-								Image 2
-							</span>
-						</div>
-					)}
-
-					{!image1 && !image2 && (
+					{!hasEditablePhotos && (
 						<div className="text-muted-foreground">No images to display</div>
 					)}
 				</div>
 
 				<PhotoEditorSidebar
-					brightness={activeImageIndex === 0 ? brightness1 : brightness2}
-					saturation={activeImageIndex === 0 ? saturation1 : saturation2}
-					blur={activeImageIndex === 0 ? blur1 : blur2}
-					onBrightnessChange={
-						activeImageIndex === 0 ? setBrightness1 : setBrightness2
+					brightness={
+						editingPhotos[activeImageIndex]?.config?.brightness ?? 100
 					}
-					onSaturationChange={
-						activeImageIndex === 0 ? setSaturation1 : setSaturation2
+					saturation={
+						editingPhotos[activeImageIndex]?.config?.saturation ?? 100
 					}
-					onBlurChange={activeImageIndex === 0 ? setBlur1 : setBlur2}
+					blur={editingPhotos[activeImageIndex]?.config?.blur ?? 0}
+					onBrightnessChange={onBrightnessChange}
+					onSaturationChange={onSaturationChange}
+					onBlurChange={onBlurChange}
 				/>
 			</div>
 		</main>
