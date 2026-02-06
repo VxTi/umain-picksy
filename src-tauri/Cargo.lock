@@ -948,9 +948,9 @@ dependencies = [
 
 [[package]]
 name = "dittolive-ditto"
-version = "4.12.0"
+version = "4.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b6a4ea84938f6ecb9eff5b539e0376b2e00f02e05699139835d70daca2db090"
+checksum = "b045d49b591227e5721df8f588867b7f10221e052cb66833a8825d21f14ce863"
 dependencies = [
  "async-trait",
  "async_fn_traits",
@@ -985,9 +985,9 @@ dependencies = [
 
 [[package]]
 name = "dittolive-ditto-sys"
-version = "4.12.0"
+version = "4.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "853125bff25e7c647ce79647f3d194193ceed6a1f74a55258e153ed0880e1744"
+checksum = "02fc773b9a1a89f2313aabb3a364a774d56f3234e50eadcabca121131122fa6c"
 dependencies = [
  "macro_rules_attribute",
  "paste",
