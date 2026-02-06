@@ -1,28 +1,20 @@
 import { Schema } from "effect";
 
-export const OrientationSchema = Schema.String;
-
-export const MetadataSchema = Schema.Struct({
-	width: Schema.Int,
-	height: Schema.Int,
-	focalLength: Schema.String,
-	orientation: OrientationSchema,
-	cameraModel: Schema.String,
-	creationDate: Schema.Date,
-	modificationDate: Schema.Date,
-}).pipe(
-	Schema.extend(Schema.Record({ key: Schema.String, value: Schema.Unknown })),
-);
+export const PhotoConfig = Schema.Struct({
+	brightness: Schema.optional(Schema.Number),
+	saturation: Schema.optional(Schema.Number),
+	blur: Schema.optional(Schema.Number),
+});
 
 export const PhotoSchema = Schema.Struct({
 	base64: Schema.String,
 	id: Schema.String,
 	image_path: Schema.String,
 	filename: Schema.String,
-	metadata: Schema.optional(MetadataSchema),
-	author_peer_id: Schema.optional(Schema.String),
+	sync_status: Schema.optional(Schema.NullOr(Schema.String)),
+	author_peer_id: Schema.optional(Schema.NullOr(Schema.String)),
+	config: Schema.optional(Schema.NullOr(PhotoConfig)),
 });
 
+export type PhotoConfig = Schema.Schema.Type<typeof PhotoConfig>;
 export type Photo = Schema.Schema.Type<typeof PhotoSchema>;
-
-export type PhotoMetadata = Schema.Schema.Type<typeof MetadataSchema>;

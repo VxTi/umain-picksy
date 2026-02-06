@@ -2,7 +2,7 @@ import { CommandType } from "@/backend/commands";
 import { SetLibraryResult } from "@/backend/events";
 import { invoke } from "@/backend/invoke";
 import { listen } from "@/backend/listen";
-import { Photo } from "@/backend/schemas";
+import { Photo, PhotoConfig } from "@/backend/schemas";
 import { useCallbackEffect, useEffectEffect } from "@/effect-react";
 import { Effect } from "effect";
 import React, { Dispatch, SetStateAction } from "react";
@@ -17,6 +17,8 @@ export interface PhotoLibraryContextType {
 	removePhotoFromLibrary: (photo: Photo) => Promise<{}>;
 	clearLibrary: () => Promise<{}>;
 	addPhotosToLibrary: () => Promise<Readonly<Photo[]>>;
+
+	saveImageConfig: (id: string, config: PhotoConfig) => Promise<{}>;
 }
 
 export const PhotoLibraryContext =
@@ -80,6 +82,15 @@ export function PhotoLibraryProvider({
 		[],
 	);
 
+	const saveImageConfig = useCallbackEffect(
+		(id: string, config: PhotoConfig) =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(invoke(CommandType.SAVE_PHOTO_CONFIG, { id, config })),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
+		[],
+	);
+
 	useEffectEffect(
 		Effect.gen(function* () {
 			yield* listen("SetLibrary", (event) => {
@@ -112,6 +123,7 @@ export function PhotoLibraryProvider({
 				removePhotoFromLibrary,
 				addPhotosFromFolder,
 				clearLibrary,
+				saveImageConfig,
 			}}
 		>
 			{children}

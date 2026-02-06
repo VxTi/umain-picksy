@@ -30,12 +30,20 @@ pub struct ImageMetadata {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PhotoConfig {
+    pub brightness: f64,
+    pub saturation: f64,
+    pub blur: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Photo {
     #[serde(default)]
     pub id: String,
     pub image_path: String,
+    pub filename: String,
     pub base64: String,
-    pub metadata: Option<ImageMetadata>,
+    pub config: Option<PhotoConfig>,
 }
 
 
@@ -67,6 +75,7 @@ struct PhotoDocument {
     base64: String,
     #[serde(default)]
     author_peer_id: Option<String>,
+    pub config: Option<PhotoConfig>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -90,6 +99,7 @@ pub struct PhotoPayload {
     pub image_path: String,
     pub base64: String,
     pub author_peer_id: Option<String>,
+    pub config: Option<PhotoConfig>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -316,6 +326,22 @@ impl DittoRepository {
         Ok(())
     }
 
+    pub async fn update_photo_config(
+        &self,
+        id: &str,
+        config: PhotoConfig,
+    ) -> Result<(), String> {
+        let store = self.ditto.store();
+        store
+            .execute_v2((
+                format!("UPDATE {PHOTOS_COLLECTION} SET config = :config WHERE _id = :id"),
+                serde_json::json!({ "config": config, "id": id }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to update photo config: {e}"))?;
+        Ok(())
+    }
+
     pub async fn emit_library_snapshot(&self, app: &AppHandle) -> Result<(), String> {
         emit_library_snapshot(self.ditto.as_ref(), app).await
     }
@@ -532,6 +558,7 @@ async fn upsert_photos_from_paths_with_ditto(
             image_path: image.image_path.clone(),
             base64: image.base64.clone(),
             author_peer_id: Some(author_peer_id.clone()),
+            config: image.config.clone(),
         };
 
         docs.push(doc);
@@ -654,6 +681,7 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
                 image_path: doc.image_path,
                 base64: doc.base64,
                 author_peer_id: doc.author_peer_id,
+                config: doc.config,
             }
         })
         .collect()
