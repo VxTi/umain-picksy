@@ -1,5 +1,10 @@
 use serde::Serialize;
 use rexif::{ExifTag, TagValue};
+use tauri::{AppHandle, State};
+use tauri_plugin_dialog::DialogExt;
+use walkdir::WalkDir;
+use crate::ditto_repo::{AppAction, DittoRepository, Photo};
+use base64::{Engine as _, engine::{general_purpose}};
 
 #[derive(Debug, Serialize)]
 pub struct ImageMetadata {
@@ -138,4 +143,66 @@ fn contains_face(path: &str) -> Result<bool, String> {
 #[cfg(any(not(target_os = "macos"), not(feature = "vision_face_detect")))]
 fn contains_face(_path: &str) -> Result<bool, String> {
     Ok(false)
+}
+
+#[tauri::command]
+pub async fn select_images_directory(
+    app: AppHandle,
+    repo: State<'_, DittoRepository>,
+) -> Result<Option<Vec<Photo>>, String> {
+    use tauri_plugin_dialog::FilePath;
+    use tauri_plugin_store::StoreExt;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    app.dialog().file().pick_folder(move |path| {
+        tx.send(path).unwrap();
+    });
+
+    let folder = rx.recv().map_err(|e| e.to_string())?;
+
+    if let Some(folder_path) = folder {
+        let path_str = match folder_path {
+            FilePath::Path(p) => p.to_string_lossy().to_string(),
+            FilePath::Url(u) => u
+                .to_file_path()
+                .map_err(|_| "Invalid URL".to_string())?
+                .to_string_lossy()
+                .to_string(),
+        };
+
+        let mut images: Vec<Photo> = Vec::new();
+
+        for entry in WalkDir::new(&path_str).into_iter().filter_map(|e| e.ok()) {
+            if entry.file_type().is_file() {
+                if let Some(ext) = entry.path().extension() {
+                    let ext = ext.to_string_lossy().to_lowercase();
+                    if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "heic" | "webp" | "tiff") {
+                        let path = entry.path().to_string_lossy().to_string();
+
+                        let base64_content = general_purpose::STANDARD.encode(std::fs::read(entry.path()).unwrap());
+
+                        images.push(Photo { image_path: path, base64: base64_content, metadata: None });
+                    }
+                }
+            }
+        }
+
+        // Persist the path
+        let store = app.store("config.json").map_err(|e| e.to_string())?;
+        store.set("library_path", serde_json::Value::String(path_str.clone()));
+        store.save().map_err(|e| e.to_string())?;
+
+        repo.dispatch(AppAction::SetImageLibraryContent {
+            images: images.clone(),
+        })
+            .await?;
+
+        repo.upsert_photos_from_paths(&images).await?;
+
+        Ok(Some(images))
+    } else {
+        // No directory content
+        Ok(None)
+    }
 }

@@ -15,16 +15,33 @@ const STATE_DOC_ID: &str = "root";
 const PHOTOS_COLLECTION: &str = "photos";
 const BACKEND_COMMAND_EVENT: &str = "backend_command";
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
-pub struct AppState {
-    pub library_path: Option<String>,
-    pub image_count: Option<usize>,
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ImageMetadata {
+    pub datetime: Option<String>,
+    pub latitude: Option<f64>,
+    pub longitude: Option<f64>,
+    pub make: Option<String>,
+    pub model: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Photo {
+    pub image_path: String,
+    pub base64: String,
+    pub metadata: Option<ImageMetadata>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AppAction {
-    SetLibraryPath { path: String, image_count: usize },
-    ClearLibraryPath,
+    SetImageLibraryContent {
+        images: Vec<Photo>
+    },
+    ClearImageLibraryContent,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+pub struct AppState {
+    pub images: Vec<Photo>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -129,49 +146,33 @@ impl DittoRepository {
         Ok(updated)
     }
 
-    pub async fn upsert_photos_from_paths(&self, image_paths: &[String]) -> Result<(), String> {
+    pub async fn upsert_photos_from_paths(&self, images: &[Photo]) -> Result<(), String> {
         let store = self.ditto.store();
         let mut seen = std::collections::HashSet::new();
 
-        for image_path in image_paths {
-            let filename = std::path::Path::new(image_path)
+        for image in images {
+            let filename = std::path::Path::new(&image.image_path)
                 .file_name()
                 .map(|name| name.to_string_lossy().to_string())
-                .unwrap_or_else(|| image_path.clone());
+                .unwrap_or_else(|| image.image_path.clone());
 
             if !seen.insert(filename.clone()) {
                 continue;
             }
 
-            let update_query = (
-                format!(
-                    "UPDATE {PHOTOS_COLLECTION} SET filename = :filename, path = :path WHERE _id = :id"
-                ),
-                serde_json::json!({
-                    "id": filename.clone(),
-                    "filename": filename.clone(),
-                    "path": image_path,
-                }),
-            );
-            let update_result = store
-                .execute_v2(update_query)
-                .await
-                .map_err(|e| format!("Failed to update Ditto photo: {e}"))?;
+            let doc = PhotoDocument {
+                _id: filename.clone(),
+                filename: filename.clone(),
+                path: image.image_path.clone(),
+            };
 
-            if update_result.item_count() == 0 {
-                let doc = PhotoDocument {
-                    _id: filename.clone(),
-                    filename: filename.clone(),
-                    path: image_path.clone(),
-                };
-                store
-                    .execute_v2((
-                        format!("INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:doc)"),
-                        serde_json::json!({ "doc": doc }),
-                    ))
-                    .await
-                    .map_err(|e| format!("Failed to insert Ditto photo: {e}"))?;
-            }
+            store
+                .execute_v2((
+                    format!("INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:doc) ON ID CONFLICT DO UPDATE"),
+                    serde_json::json!({ "doc": doc }),
+                ))
+                .await
+                .map_err(|e| format!("Failed to upsert Ditto photo: {e}"))?;
         }
 
         Ok(())
@@ -190,13 +191,11 @@ impl DittoRepository {
 impl AppState {
     fn reduce(&mut self, action: AppAction) {
         match action {
-            AppAction::SetLibraryPath { path, image_count } => {
-                self.library_path = Some(path);
-                self.image_count = Some(image_count);
+            AppAction::SetImageLibraryContent { images } => {
+                self.images = images;
             }
-            AppAction::ClearLibraryPath => {
-                self.library_path = None;
-                self.image_count = None;
+            AppAction::ClearImageLibraryContent => {
+                self.images.clear();
             }
         }
     }
@@ -256,28 +255,18 @@ async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
 
 async fn persist_state(ditto: &Ditto, state: &AppState) -> Result<(), String> {
     let store = ditto.store();
-    let update_query = (
-        format!("UPDATE {STATE_COLLECTION} SET state = :state WHERE _id = :id"),
-        serde_json::json!({ "state": state, "id": STATE_DOC_ID }),
-    );
-    let update_result = store
-        .execute_v2(update_query)
-        .await
-        .map_err(|e| format!("Failed to update Ditto state: {e}"))?;
+    let doc = StoredState {
+        _id: STATE_DOC_ID.to_string(),
+        state: state.clone(),
+    };
 
-    if update_result.item_count() == 0 {
-        let doc = StoredState {
-            _id: STATE_DOC_ID.to_string(),
-            state: state.clone(),
-        };
-        store
-            .execute_v2((
-                format!("INSERT INTO {STATE_COLLECTION} DOCUMENTS (:doc)"),
-                serde_json::json!({ "doc": doc }),
-            ))
-            .await
-            .map_err(|e| format!("Failed to insert Ditto state: {e}"))?;
-    }
+    store
+        .execute_v2((
+            format!("INSERT INTO {STATE_COLLECTION} DOCUMENTS (:doc) ON ID CONFLICT DO UPDATE"),
+            serde_json::json!({ "doc": doc }),
+        ))
+        .await
+        .map_err(|e| format!("Failed to persist Ditto state: {e}"))?;
 
     Ok(())
 }
