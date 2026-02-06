@@ -1,5 +1,5 @@
 import { Effect, Exit, Fiber, Runtime, Scope } from "effect";
-import { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 
 const runtime = Runtime.defaultRuntime;
 
@@ -30,5 +30,14 @@ export function useEffectEffect<A, E>(
 				}),
 			).catch(() => {});
 		};
+	}, deps);
+}
+
+export function useCallbackEffect<A, E>(
+	effectFactory: () => Effect.Effect<A, E>,
+	deps: React.DependencyList,
+) {
+	return useCallback(() => {
+		return Runtime.runPromise(runtime)(effectFactory());
 	}, deps);
 }

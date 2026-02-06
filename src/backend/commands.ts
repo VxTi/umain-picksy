@@ -7,21 +7,50 @@ type CommandEntry = {
 	result: Schema.Schema<any, any, any>;
 };
 
-const OpenFolderArgsSchema = Schema.Struct({ folder: Schema.String });
-const OpenFolderResultSchema = Schema.Struct({});
+const EmptySchema = Schema.Struct({});
+
+const AddPhotosFromFolderArgsSchema = EmptySchema;
+const AddPhotosFromFolderResultSchema = Schema.Array(PhotoSchema);
+
+const AddPhotosToLibraryArgsSchema = EmptySchema;
+const AddPhotosToLibraryResultSchema = Schema.Array(PhotoSchema);
+
+const GetPhotosFromLibraryArgsSchema = EmptySchema;
+const GetPhotosFromLibraryResultSchema = Schema.Array(PhotoSchema);
+
+const RemovePhotoFromLibraryArgsSchema = Schema.Struct({
+	photoId: Schema.String,
+});
+
+export const enum CommandType {
+	ADD_PHOTOS_FROM_FOLDER = "open_folder",
+	CLEAR_LIBRARY = "clear_library",
+	ADD_PHOTOS_TO_LIBRARY = "add_photos_to_library",
+	REMOVE_PHOTO_FROM_LIBRARY = "remove_photo_from_library",
+	GET_PHOTOS_FROM_LIBRARY = "get_photos_from_library",
+}
 
 export const CommandSchemas = {
-	open_folder: {
-		args: OpenFolderArgsSchema,
-		result: OpenFolderResultSchema,
+	[CommandType.ADD_PHOTOS_FROM_FOLDER]: {
+		args: AddPhotosFromFolderArgsSchema,
+		result: AddPhotosFromFolderResultSchema,
 	},
-	get_library_photos: {
-		args: Schema.Struct({}),
-		result: Schema.Array(PhotoSchema),
+	[CommandType.ADD_PHOTOS_TO_LIBRARY]: {
+		args: AddPhotosToLibraryArgsSchema,
+		result: AddPhotosToLibraryResultSchema,
 	},
-	clear_library: {
-		args: Schema.Struct({}),
-		result: Schema.Struct({}),
+
+	[CommandType.GET_PHOTOS_FROM_LIBRARY]: {
+		args: GetPhotosFromLibraryArgsSchema,
+		result: GetPhotosFromLibraryResultSchema,
+	},
+	[CommandType.CLEAR_LIBRARY]: {
+		args: EmptySchema,
+		result: EmptySchema,
+	},
+	[CommandType.REMOVE_PHOTO_FROM_LIBRARY]: {
+		args: RemovePhotoFromLibraryArgsSchema,
+		result: EmptySchema,
 	},
 } as const satisfies Record<string, CommandEntry>;
 
