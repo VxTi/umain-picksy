@@ -13,7 +13,7 @@
 **I want** to name or add a label to a content-based group  
 **So that** I can find it later (e.g. “Beach 2024”, “Conference”).
 
-- Edit group name/description.
+- PhotoEditor group name/description.
 - Optional: merge/split groups.
 
 ## US-3.3 Browse content groups

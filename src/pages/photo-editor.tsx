@@ -4,12 +4,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
-import { twMerge } from "tailwind-merge";
-import EditingSettingsBar from "./EditingSettingsBar";
+import { twMerge }        from "tailwind-merge";
+import PhotoEditorSidebar from "../components/photo-editor-sidebar";
 import { PhotoComponent } from "./PhotoComponent";
 import type { ImageItem } from "./Gallery";
 
-function Edit() {
+function PhotoEditor() {
 	const location = useLocation();
 	const navigate = useNavigate();
 	const [images, setImages] = useState<ImageItem[]>(
@@ -60,7 +60,7 @@ function Edit() {
 
 	return (
 		<main className="h-screen bg-background flex flex-col overflow-hidden">
-			<div className="p-4 flex-shrink-0">
+			<div className="p-4 shrink-0">
 				<div className="flex items-center justify-between">
 					<p className="text-sm text-muted-foreground">
 						{images.length > 0
@@ -151,7 +151,7 @@ function Edit() {
 					)}
 				</div>
 
-				<EditingSettingsBar
+				<PhotoEditorSidebar
 					brightness={activeImageIndex === 0 ? brightness1 : brightness2}
 					saturation={activeImageIndex === 0 ? saturation1 : saturation2}
 					blur={activeImageIndex === 0 ? blur1 : blur2}
@@ -168,4 +168,4 @@ function Edit() {
 	);
 }
 
-export default Edit;
+export default PhotoEditor;
