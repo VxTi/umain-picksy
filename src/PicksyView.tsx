@@ -1,7 +1,12 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import type { Photo } from "./backend/commandStream";
 
-export default function PicksyView() {
+type PicksyViewProps = {
+  photos: Photo[];
+};
+
+export default function PicksyView({ photos }: PicksyViewProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-[420px] shadow-xl">
@@ -23,8 +28,12 @@ export default function PicksyView() {
             </Button>
           </div>
 
+          <p className="text-xs text-muted-foreground">
+            {photos.length} photos in library
+          </p>
+
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

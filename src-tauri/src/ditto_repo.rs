@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
+use dittolive_ditto::dql::QueryResult;
 use dittolive_ditto::fs::PersistentRoot;
 use dittolive_ditto::identity;
 use dittolive_ditto::prelude::*;
@@ -323,7 +324,7 @@ async fn emit_library_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), Str
     emit_backend_command(app, command)
 }
 
-fn collect_photo_payloads(query_result: &StoreQueryResult) -> Vec<PhotoPayload> {
+fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
     query_result
         .iter()
         .filter_map(|item| item.deserialize_value::<PhotoDocument>().ok())
