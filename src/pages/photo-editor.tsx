@@ -1,15 +1,17 @@
-import { EventType } from "@/lib/events";
-import { SaveIcon } from "lucide-react";
+import { usePhotoLibrary }          from '@/backend/photo-library-context';
+import { EventType }                from "@/lib/events";
+import { SaveIcon }                 from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { Button } from "@/components/ui/button";
-import { twMerge }        from "tailwind-merge";
-import PhotoEditorSidebar from "../components/photo-editor-sidebar";
-import { PhotoComponent } from "./PhotoComponent";
-import type { ImageItem } from "./Gallery";
+import { useState, useEffect }      from "react";
+import { listen }                   from "@tauri-apps/api/event";
+import { Button }                   from "@/components/ui/button";
+import { twMerge }                  from "tailwind-merge";
+import PhotoEditorSidebar           from "../components/photo-editor-sidebar";
+import { PhotoComponent }           from "./PhotoComponent";
+import type { ImageItem }           from "./Gallery";
 
 function PhotoEditor() {
+	const { photos } = usePhotoLibrary();
 	const location = useLocation();
 	const navigate = useNavigate();
 	const [images, setImages] = useState<ImageItem[]>(
@@ -40,8 +42,8 @@ function PhotoEditor() {
 
 	const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-	const image1 = images[0];
-	const image2 = images[1];
+	const image1 = photos[0];
+	const image2 = photos[1];
 
 	const handleSave = () => {
 		if (image1) {
@@ -115,8 +117,8 @@ function PhotoEditor() {
 							)}
 						>
 							<PhotoComponent
-								src={image1.url}
-								alt={image1.title}
+								src={image1.base64}
+								alt={image1.filename}
 								brightness={brightness1}
 								blur={blur1}
 								saturation={saturation1}
@@ -134,8 +136,8 @@ function PhotoEditor() {
 							className={`flex-1 h-full flex flex-col items-center justify-center transition-all duration-300 ${activeImageIndex === 0 ? "opacity-50 scale-95" : "opacity-100 scale-100"}`}
 						>
 							<PhotoComponent
-								src={image2.url}
-								alt={image2.title}
+								src={image2.base64}
+								alt={image2.filename}
 								brightness={brightness2}
 								blur={blur2}
 								saturation={saturation2}
