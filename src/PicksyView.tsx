@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Link } from "react-router-dom"
 
 export default function PicksyView() {
   return (
@@ -18,8 +19,8 @@ export default function PicksyView() {
               Select folder
             </Button>
 
-            <Button size="lg" variant="outline" className="w-full">
-              Call the developer directly
+            <Button size="lg" variant="outline" className="w-full" asChild>
+              <Link to="/gallery">View Gallery</Link>
             </Button>
           </div>
 

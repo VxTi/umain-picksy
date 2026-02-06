@@ -1,22 +1,20 @@
 import { analyzeImageMetadata, selectSourceFolder } from './lib/vision';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Home from "./pages/Home";
+import Gallery from "./pages/Gallery";
+import Edit from "./pages/Edit";
+
 import "./App.css";
-import PicksyView from "./PicksyView";
 
 function App() {
-  async function test() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    const result = await selectSourceFolder();
-    if (result && result.length > 0) {
-      // Example: analyze metadata of the first image
-      const metadata = await Promise.all(result.map(r => analyzeImageMetadata(r)));
-      console.log(metadata);
-    }
-  }
-
   return (
-    <main className="container">
-      <PicksyView/>
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/edit" element={<Edit />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
