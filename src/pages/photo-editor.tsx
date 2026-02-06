@@ -101,9 +101,10 @@ function PhotoEditor() {
 						)}
 						<Button
 							onClick={handleSave}
-							className="rounded-full font-semibold text-white bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/30 hover:scale-102 transition-all"
+							className="rounded-full font-semibold bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/30 hover:scale-102 transition-all"
 						>
-							<SaveIcon className="size-4" /> Save edits
+							<SaveIcon className="size-4" />
+							<span className='text-foreground'> Save edits</span>
 						</Button>
 						{!hasEditablePhotos && (
 							<Button variant="outline" onClick={() => navigate("/gallery")}>
@@ -121,20 +122,24 @@ function PhotoEditor() {
 						<div
 							key={photo.id}
 							className={twMerge(
-								"flex-1 h-full flex flex-col items-center justify-center transition-all duration-300",
-								editingPhotos.length > 1 && activeImageIndex === i
-									? "opacity-100 scale-100"
-									: "opacity-50 scale-90",
+								"flex-1 h-full flex flex-col items-center justify-center",
 							)}
 						>
 							<PhotoComponent
 								src={photo.base64}
 								alt={photo.filename}
 								config={photo.config ?? {}}
+								onClick={() => setActiveImageIndex(i)}
+								className={twMerge(
+									"transition-all duration-300",
+									editingPhotos.length > 1 && activeImageIndex === i
+										? "opacity-100 scale-100"
+										: "opacity-50 scale-90",
+								)}
 							/>
 							{editingPhotos.length > 1 && (
 								<span className="mt-2 text-xs font-medium text-muted-foreground">
-									Image {i}
+									{photo.filename}
 								</span>
 							)}
 						</div>

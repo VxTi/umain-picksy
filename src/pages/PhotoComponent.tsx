@@ -1,34 +1,36 @@
 import { PhotoConfig } from "@/backend/schemas";
-import React from "react";
+import { type ComponentProps } from "react";
+import { twMerge } from "tailwind-merge";
 
-type ImageViewProps = {
+type ImageViewProps = ComponentProps<"div"> & {
 	src: string;
 	alt?: string;
 	config: PhotoConfig;
 };
 
-export const PhotoComponent: React.FC<ImageViewProps> = ({
+export function PhotoComponent({
 	config,
 	src,
 	alt = "",
-}) => {
+	className,
+	...props
+}: ImageViewProps) {
 	const { brightness, saturation, blur } = config;
 	const filter = `brightness(${brightness ?? 100}%) saturate(${saturation ?? 50}%) blur(${blur ?? 0}px)`;
 	return (
 		<div
-			className='overflow-hidden  size-full flex items-center justify-center'
+			className={twMerge(
+				"overflow-hidden  size-full flex items-center justify-center",
+				className,
+			)}
+			{...props}
 		>
 			<img
 				src={src}
 				alt={alt}
-				style={{
-					maxHeight: "100%",
-					maxWidth: "100%",
-					objectFit: "contain",
-					filter,
-					display: "block",
-				}}
+				className="size-3/4 object-contain block"
+				style={{ filter }}
 			/>
 		</div>
 	);
-};
+}
