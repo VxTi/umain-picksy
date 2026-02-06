@@ -1,0 +1,3 @@
+[submodule "ditto-quickstart"]
+	path = ditto-quickstart
+	url = https://github.com/getditto/quickstart
