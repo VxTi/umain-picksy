@@ -240,7 +240,7 @@ fn load_dotenv(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn read_ditto_env() -> Result<(String, String, String), String> {
+fn read_ditto_env() -> Result<(String, String, String, String), String> {
     let app_id = std::env::var("DITTO_APP_ID")
         .or_else(|_| std::env::var("DITTO_DATABASE_ID"))
         .map_err(|_| "Missing DITTO_APP_ID (or DITTO_DATABASE_ID)".to_string())?;
