@@ -255,11 +255,6 @@ pub async fn add_photos_from_folder(
             }
         }
 
-        // Persist the path
-        let store = app.store("config.json").map_err(|e| e.to_string())?;
-        store.set("library_path", serde_json::Value::String(path_str.clone()));
-        store.save().map_err(|e| e.to_string())?;
-
         repo.dispatch(AppAction::SetImageLibraryContent {
             images: images.clone(),
         })

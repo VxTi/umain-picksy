@@ -69,7 +69,7 @@ struct StoredState {
 struct PhotoDocument {
     _id: String,
     filename: String,
-    path: String,
+    image_path: String,
     base64: String,
     #[serde(default)]
     content_commit_id: Option<u64>,
@@ -81,7 +81,7 @@ struct PhotoDocument {
 pub struct PhotoPayload {
     pub id: String,
     pub filename: String,
-    pub path: String,
+    pub image_path: String,
     pub base64: String,
     pub sync_status: SyncStatus,
     pub author_peer_id: Option<String>,
@@ -273,7 +273,7 @@ impl DittoRepository {
             let doc = PhotoDocument {
                 _id: doc_id.clone(),
                 filename: filename.clone(),
-                path: image.image_path.clone(),
+                image_path: image.image_path.clone(),
                 base64: image.base64.clone(),
                 content_commit_id: None,
                 author_peer_id: Some(author_peer_id.clone()),
@@ -559,7 +559,7 @@ fn collect_photo_payloads(query_result: &QueryResult, sync_info: &SyncInfo) -> V
             PhotoPayload {
                 id: doc._id,
                 filename: doc.filename,
-                path: doc.path,
+                image_path: doc.image_path,
                 base64: doc.base64,
                 sync_status,
                 author_peer_id: doc.author_peer_id,
