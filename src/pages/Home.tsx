@@ -14,7 +14,6 @@ export default function Home() {
 	const photos = usePhotos();
 
 	const handleAddPhoto = useCallbackEffect(() => addPhotosToLibrary(), []);
-	
 
 	const handleSelectFolder = useCallback(async () => {
 		try {

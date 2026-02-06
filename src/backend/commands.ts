@@ -1,5 +1,5 @@
-import { Schema }      from 'effect';
-import { PhotoSchema } from './schemas';
+import { Schema } from "effect";
+import { PhotoSchema } from "./schemas";
 
 /** Ensures every command has both args and result schemas. */
 type CommandEntry = {
@@ -10,15 +10,17 @@ type CommandEntry = {
 const EmptySchema = Schema.Struct({});
 
 const AddPhotosFromFolderArgsSchema = EmptySchema;
-const AddPhotosFromFolderResultSchema = EmptySchema;
+const AddPhotosFromFolderResultSchema = Schema.Array(PhotoSchema);
 
-const AddPhotosToLibraryArgsSchema = Schema.Struct({ folder: Schema.String });
+const AddPhotosToLibraryArgsSchema = EmptySchema;
 const AddPhotosToLibraryResultSchema = Schema.Array(PhotoSchema);
 
 const GetPhotosFromLibraryArgsSchema = EmptySchema;
 const GetPhotosFromLibraryResultSchema = Schema.Array(PhotoSchema);
 
-const RemovePhotoFromLibraryArgsSchema = Schema.Struct({ photoId: Schema.String });
+const RemovePhotoFromLibraryArgsSchema = Schema.Struct({
+	photoId: Schema.String,
+});
 
 export const enum CommandType {
 	ADD_PHOTOS_FROM_FOLDER = "open_folder",
@@ -47,13 +49,9 @@ export const CommandSchemas = {
 		result: EmptySchema,
 	},
 	[CommandType.REMOVE_PHOTO_FROM_LIBRARY]: {
-		args:   RemovePhotoFromLibraryArgsSchema,
+		args: RemovePhotoFromLibraryArgsSchema,
 		result: EmptySchema,
 	},
-  add_photo_to_library: {
-    args: Schema.Struct({}),
-    result: Schema.Array(PhotoSchema),
-  }
 } as const satisfies Record<string, CommandEntry>;
 
 export type Command = keyof typeof CommandSchemas;
