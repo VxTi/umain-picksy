@@ -185,13 +185,14 @@ impl DittoRepository {
             transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
-            transport_config.peer_to_peer.bluetooth_le.enabled = false;
+            transport_config.peer_to_peer.bluetooth_le.enabled = true;
             //Local Area Network
-            transport_config.peer_to_peer.lan.enabled = false;
+            transport_config.peer_to_peer.lan.enabled = true;
             // Apple Wireless Direct Link
             // transport_config.peer_to_peer.awdl.enabled = false;
             //wifi aware
             // transport_config.peer_to_peer.wifi_aware.enabled = false;
+            println!("Transport config: {:#?}", transport_config);
         });
 
         ditto
