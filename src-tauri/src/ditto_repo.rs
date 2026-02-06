@@ -26,6 +26,8 @@ pub struct ImageMetadata {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Photo {
+    #[serde(default)]
+    pub id: String,
     pub image_path: String,
     pub base64: String,
     pub metadata: Option<ImageMetadata>,
@@ -83,7 +85,7 @@ impl DittoRepository {
     pub async fn init(app: &AppHandle) -> Result<Self, String> {
         load_dotenv(app)?;
 
-        let (app_id, playground_token, auth_url) = read_ditto_env()?;
+        let (app_id, playground_token, auth_url, websocket_url) = read_ditto_env()?;
         let data_dir = app
             .path()
             .app_data_dir()
@@ -111,6 +113,8 @@ impl DittoRepository {
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
 
         ditto.update_transport_config(|transport_config| {
+            transport_config.connect.websocket_urls.clear();
+            transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
             transport_config.peer_to_peer.bluetooth_le.enabled = false;
             //Local Area Network
@@ -170,12 +174,14 @@ impl DittoRepository {
                 .map(|name| name.to_string_lossy().to_string())
                 .unwrap_or_else(|| image.image_path.clone());
 
-            if !seen.insert(filename.clone()) {
+            let doc_id = image.id.clone();
+
+            if !seen.insert(doc_id.clone()) {
                 continue;
             }
 
             let doc = PhotoDocument {
-                _id: filename.clone(),
+                _id: doc_id,
                 filename: filename.clone(),
                 path: image.image_path.clone(),
                 base64: image.base64.clone(),
@@ -235,7 +241,7 @@ fn load_dotenv(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn read_ditto_env() -> Result<(String, String, String), String> {
+fn read_ditto_env() -> Result<(String, String, String, String), String> {
     let app_id = std::env::var("DITTO_APP_ID")
         .or_else(|_| std::env::var("DITTO_DATABASE_ID"))
         .map_err(|_| "Missing DITTO_APP_ID (or DITTO_DATABASE_ID)".to_string())?;
@@ -244,7 +250,9 @@ fn read_ditto_env() -> Result<(String, String, String), String> {
         .map_err(|_| "Missing DITTO_PLAYGROUND_TOKEN (or DITTO_SHARED_TOKEN)".to_string())?;
     let auth_url = std::env::var("DITTO_AUTH_URL")
         .map_err(|_| "Missing DITTO_AUTH_URL".to_string())?;
-    Ok((app_id, playground_token, auth_url))
+    let websocket_url = std::env::var("DITTO_WEBSOCKET_URL")
+        .map_err(|_| "Missing DITTO_WEBSOCKET_URL".to_string())?;
+    Ok((app_id, playground_token, auth_url, websocket_url))
 }
 
 async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
@@ -262,10 +270,14 @@ async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
         return Ok(AppState::default());
     };
 
-    let stored: StoredState = item
-        .deserialize_value()
-        .map_err(|e| format!("Failed to deserialize Ditto state: {e}"))?;
-    Ok(stored.state)
+    let stored: StoredState = match item.deserialize_value() {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("Failed to deserialize Ditto state (schema mismatch?): {e}. Resetting state.");
+            return Ok(AppState::default());
+        }
+    };
+    Ok(normalize_state(stored.state))
 }
 
 async fn persist_state(ditto: &Ditto, state: &AppState) -> Result<(), String> {
@@ -303,11 +315,20 @@ fn install_state_observer(
             let stored: Result<StoredState, _> = item.deserialize_value();
             if let Ok(stored) = stored {
                 if let Ok(mut guard) = state.write() {
-                    *guard = stored.state;
+                    *guard = normalize_state(stored.state);
                 }
             }
         })
         .map_err(|e| format!("Failed to register Ditto observer: {e}"))
+}
+
+fn normalize_state(mut state: AppState) -> AppState {
+    for photo in &mut state.images {
+        if photo.id.is_empty() {
+            photo.id = photo.image_path.clone();
+        }
+    }
+    state
 }
 
 fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreObserver>, String> {

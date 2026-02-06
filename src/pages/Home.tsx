@@ -1,8 +1,8 @@
+import { usePhotos } from "@/backend/hooks";
 import { useCallback } from "react";
 
-import { selectSourceFolder, analyzeImageMetadata } from '../lib/vision';
+import { selectSourceFolder, analyzeImageMetadata } from "@/lib/vision";
 import PicksyView from "../PicksyView";
-import { usePhotos } from "@/backend/hooks";
 
 function Home() {
   const photos = usePhotos();
@@ -13,7 +13,9 @@ function Home() {
 
       console.log(result);
       if (result && result.length > 0) {
-        const metadata = await Promise.all(result.map(r => analyzeImageMetadata(r.image_path)));
+        const metadata = await Promise.all(
+          result.map((r) => analyzeImageMetadata(r.image_path)),
+        );
         console.log(metadata);
       }
     } catch (error) {
@@ -22,9 +24,9 @@ function Home() {
   }, []);
 
   return (
-       <main className="container">
-         <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
-       </main>
+    <main className="container">
+      <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
+    </main>
   );
 }
 
