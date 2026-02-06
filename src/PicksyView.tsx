@@ -40,7 +40,7 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
             {photos.map((photo, index) => (
               <img
                 key={photo.id ?? index}
-                src={`data:image/png;base64,${photo.base64}`}
+                src={photo.base64}
                 alt={photo.filename}
                 className="h-20 w-full rounded object-cover"
                 loading="lazy"

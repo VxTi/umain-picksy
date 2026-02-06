@@ -41,6 +41,7 @@ pub enum AppAction {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AppState {
+    #[serde(default)]
     pub images: Vec<Photo>,
 }
 
@@ -55,6 +56,7 @@ struct PhotoDocument {
     _id: String,
     filename: String,
     path: String,
+    base64: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -62,6 +64,7 @@ pub struct PhotoPayload {
     pub id: String,
     pub filename: String,
     pub path: String,
+    pub base64: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -107,6 +110,18 @@ impl DittoRepository {
         ditto
             .disable_sync_with_v3()
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
+
+        ditto.update_transport_config(|transport_config| {
+            //BluetoothLe
+            transport_config.peer_to_peer.bluetooth_le.enabled = false;
+            //Local Area Network
+            transport_config.peer_to_peer.lan.enabled = false;
+            // Apple Wireless Direct Link
+            // transport_config.peer_to_peer.awdl.enabled = false;
+            //wifi aware
+            // transport_config.peer_to_peer.wifi_aware.enabled = false;
+        });
+
         ditto
             .start_sync()
             .map_err(|e| format!("Failed to start Ditto sync: {e}"))?;
@@ -164,6 +179,7 @@ impl DittoRepository {
                 _id: filename.clone(),
                 filename: filename.clone(),
                 path: image.image_path.clone(),
+                base64: image.base64.clone(),
             };
 
             store
@@ -330,6 +346,7 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
             id: doc._id,
             filename: doc.filename,
             path: doc.path,
+            base64: doc.base64,
         })
         .collect()
 }

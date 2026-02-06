@@ -2,8 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/button";
-import { convertFileSrc } from "@tauri-apps/api/core";
-import type { Photo } from "../backend/commandStream";
+import type { Photo } from '@/backend/commandStream';
 
 export interface ImageItem {
 	id: string;
@@ -19,7 +18,7 @@ function Gallery() {
 	// Convert Photo[] to ImageItem[] for the gallery
 	const images: ImageItem[] = photos.map((photo) => ({
 		id: photo.id,
-		url: convertFileSrc(photo.path),
+		url: photo.base64,
 		title: photo.filename,
 	}));
 
@@ -81,7 +80,7 @@ function Gallery() {
 								alt={image.title}
 								className="w-full h-48 object-cover"
 							/>
-							<div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+							<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 								<p className="text-white text-sm font-medium">
 									{image.title}
 								</p>
