@@ -26,6 +26,7 @@ pub struct ImageMetadata {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Photo {
+    #[serde(default)]
     pub id: String,
     pub image_path: String,
     pub base64: String,
@@ -113,6 +114,7 @@ impl DittoRepository {
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
 
         ditto.update_transport_config(|transport_config| {
+            transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
             transport_config.peer_to_peer.bluetooth_le.enabled = false;
@@ -276,7 +278,7 @@ async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
             return Ok(AppState::default());
         }
     };
-    Ok(stored.state)
+    Ok(normalize_state(stored.state))
 }
 
 async fn persist_state(ditto: &Ditto, state: &AppState) -> Result<(), String> {
@@ -314,11 +316,20 @@ fn install_state_observer(
             let stored: Result<StoredState, _> = item.deserialize_value();
             if let Ok(stored) = stored {
                 if let Ok(mut guard) = state.write() {
-                    *guard = stored.state;
+                    *guard = normalize_state(stored.state);
                 }
             }
         })
         .map_err(|e| format!("Failed to register Ditto observer: {e}"))
+}
+
+fn normalize_state(mut state: AppState) -> AppState {
+    for photo in &mut state.images {
+        if photo.id.is_empty() {
+            photo.id = photo.image_path.clone();
+        }
+    }
+    state
 }
 
 fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreObserver>, String> {
