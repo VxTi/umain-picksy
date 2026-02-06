@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Photo } from "./backend/commandStream";
 
 type PicksyViewProps = {
@@ -32,6 +33,18 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
           <p className="text-xs text-muted-foreground">
             {photos.length} photos in library
           </p>
+
+          <div className="grid grid-cols-3 gap-2 w-full">
+            {photos.map((photo) => (
+              <img
+                key={photo.id}
+                src={convertFileSrc(photo.path)}
+                alt={photo.filename}
+                className="h-20 w-full rounded object-cover"
+                loading="lazy"
+              />
+            ))}
+          </div>
 
         </CardContent>
       </Card>
