@@ -40,11 +40,11 @@ struct PhotoDocument {
     path: String,
 }
 
-#[derive(Clone, Debug, Serialize)]
-struct PhotoPayload {
-    id: String,
-    filename: String,
-    path: String,
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PhotoPayload {
+    pub id: String,
+    pub filename: String,
+    pub path: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -175,6 +175,15 @@ impl DittoRepository {
         }
 
         Ok(())
+    }
+
+    pub async fn get_photos(&self) -> Result<Vec<PhotoPayload>, String> {
+        let store = self.ditto.store();
+        let result = store
+            .execute_v2(format!("SELECT * FROM {PHOTOS_COLLECTION}"))
+            .await
+            .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
+        Ok(collect_photo_payloads(&result))
     }
 }
 

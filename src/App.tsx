@@ -6,6 +6,7 @@ import {
   type BackendCommand,
   type Photo,
 } from "./backend/commandStream";
+import { getLibraryPhotos } from "./lib/library";
 import { selectSourceFolder } from "./lib/vision";
 
 function App() {
@@ -24,6 +25,14 @@ function App() {
       })
       .catch((error) => {
         console.error("Failed to listen for backend commands", error);
+      });
+
+    getLibraryPhotos()
+      .then((initialPhotos) => {
+        setPhotos(initialPhotos);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch library photos", error);
       });
 
     return () => {

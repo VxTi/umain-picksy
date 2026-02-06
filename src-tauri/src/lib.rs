@@ -1,6 +1,6 @@
 mod ditto_repo;
 
-use ditto_repo::{AppAction, AppState, DittoRepository};
+use ditto_repo::{AppAction, AppState, DittoRepository, PhotoPayload};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
@@ -72,6 +72,11 @@ fn get_app_state(repo: State<'_, DittoRepository>) -> AppState {
     repo.get_state()
 }
 
+#[tauri::command]
+async fn get_library_photos(repo: State<'_, DittoRepository>) -> Result<Vec<PhotoPayload>, String> {
+    repo.get_photos().await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -93,7 +98,8 @@ pub fn run() {
             select_source_folder,
             analyze_image_metadata,
             recognize_faces,
-            get_app_state
+            get_app_state,
+            get_library_photos
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
