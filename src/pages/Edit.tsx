@@ -1,6 +1,7 @@
 import { SaveIcon }                 from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useState }                 from 'react';
+import { useState, useEffect }      from 'react';
+import { listen }                   from '@tauri-apps/api/event';
 import { TopBar }                   from '@/components/TopBar';
 import { Button }                   from '@/components/ui/button';
 import { twMerge }                  from 'tailwind-merge';
@@ -11,7 +12,21 @@ import type { ImageItem }           from './Gallery';
 function Edit() {
   const location = useLocation();
   const navigate = useNavigate();
-  const images   = (location.state?.images as ImageItem[]) || [];
+  const [images, setImages] = useState<ImageItem[]>(
+    (location.state?.images as ImageItem[]) || []
+  );
+
+  // Listen for images from the gallery window via events
+  useEffect(() => {
+    const unlisten = listen<ImageItem[]>("edit-images", (event) => {
+      console.log("Edit received images via event:", event.payload.length);
+      setImages(event.payload);
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   // editing state for image 1
   const [ brightness1, setBrightness1 ] = useState(100);
@@ -41,7 +56,6 @@ function Edit() {
 
   return (
     <main className="h-screen bg-background flex flex-col overflow-hidden">
-      <TopBar title={isDouble ? 'Compare & Edit' : 'Edit Page'} />
 
       <div className="p-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
