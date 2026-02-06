@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "umain-picksy",
+  "productName": "Picksy",
   "version": "0.1.0",
   "identifier": "com.umain-picksy.app",
   "build": {
@@ -12,9 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "umain-picksy",
-        "width": 800,
-        "height": 600
+        "label": "main",
+        "title": "Picksy",
+        "width": 1280,
+        "height": 800
       }
     ],
     "security": {

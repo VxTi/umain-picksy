@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { listen } from "@tauri-apps/api/event";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/button";
 import type { ImageItem } from "./Gallery";
@@ -6,11 +8,23 @@ import type { ImageItem } from "./Gallery";
 function Edit() {
   const location = useLocation();
   const navigate = useNavigate();
-  const images = (location.state?.images as ImageItem[]) || [];
+  const [images, setImages] = useState<ImageItem[]>(
+    (location.state?.images as ImageItem[]) || []
+  );
+
+  // Listen for images from the gallery window via events
+  useEffect(() => {
+    const unlisten = listen<ImageItem[]>("edit-images", (event) => {
+      setImages(event.payload);
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-background">
-      <TopBar title="Edit Page" />
 
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
@@ -41,10 +55,7 @@ function Edit() {
                   alt={image.title}
                   className="w-full h-64 object-cover"
                 />
-                <div className="p-4">
-                  <h3 className="font-semibold">{image.title}</h3>
-                  <p className="text-sm text-muted-foreground">ID: {image.id}</p>
-                </div>
+                <label className="block p-4 text-sm font-medium">{image.title}</label>
               </div>
             ))}
           </div>

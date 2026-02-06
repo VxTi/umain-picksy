@@ -3,13 +3,20 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "main",
+    "gallery",
+    "edit"
   ],
   "permissions": [
     "fs:read-files",
     "fs:scope-home-recursive",
     "fs:allow-exists",
     "core:default",
+    "core:window:allow-create",
+    "core:window:allow-set-focus",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:webview:allow-create-webview-window",
     "opener:default",
     "dialog:default",
     "fs:default",

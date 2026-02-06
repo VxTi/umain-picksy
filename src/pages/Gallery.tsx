@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { listen } from "@tauri-apps/api/event";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/button";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Photo } from "../backend/commandStream";
+import { getLibraryPhotos } from "@/lib/library";
+import { openEditWindow } from "@/lib/windows";
 
 export interface ImageItem {
 	id: string;
@@ -14,7 +17,22 @@ export interface ImageItem {
 function Gallery() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const photos: Photo[] = location.state?.photos || [];
+	const [photos, setPhotos] = useState<Photo[]>(location.state?.photos || []);
+
+	// Listen for photos from the main window via events
+	useEffect(() => {
+		// Load photos from library on mount
+		getLibraryPhotos().then(setPhotos).catch(console.error);
+
+		// Also listen for photos sent via event
+		const unlisten = listen<Photo[]>("gallery-photos", (event) => {
+			setPhotos(event.payload);
+		});
+
+		return () => {
+			unlisten.then((fn) => fn());
+		};
+	}, []);
 
 	// Convert Photo[] to ImageItem[] for the gallery
 	const images: ImageItem[] = photos.map((photo) => ({
@@ -42,7 +60,7 @@ function Gallery() {
 
 	const handleEditClick = () => {
 		if (selectedImages.length > 0) {
-			navigate("/edit", { state: { images: selectedImages } });
+			openEditWindow(selectedImages);
 		}
 	};
 
@@ -50,7 +68,6 @@ function Gallery() {
 
 	return (
 		<main className="min-h-screen bg-background">
-			<TopBar title="Gallery" />
 
 			<div className="p-4">
 				<div className="flex items-center justify-between mb-4">
@@ -82,9 +99,9 @@ function Gallery() {
 								className="w-full h-48 object-cover"
 							/>
 							<div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-								<p className="text-white text-sm font-medium">
+								<label className="text-white text-sm font-medium">
 									{image.title}
-								</p>
+								</label>
 							</div>
 							{isSelected(image.id) && (
 								<div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">

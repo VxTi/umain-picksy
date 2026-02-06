@@ -57,7 +57,7 @@ function Home() {
   }, []);
 
   return (
-       <main className="container">
+       <main className="min-h-screen">
          <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
        </main>
   );
