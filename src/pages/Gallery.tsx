@@ -5,18 +5,12 @@ import { SyncStatus } from "@/lib/synchronization";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
 import { PencilIcon, Trash2Icon } from "lucide-react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
-
-export interface ImageItem {
-	id: string;
-	url: string;
-	title: string;
-	syncStatus: Photo["sync_status"];
-}
 
 interface PresencePeer {
 	peer_key: string;
@@ -41,6 +35,7 @@ export default function Gallery() {
 			? photos
 			: photos.filter((photo) => photo.author_peer_id === authorFilter);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset selection on filter change
 	useEffect(() => {
 		setSelectedImages([]);
 	}, [authorFilter]);
@@ -104,7 +99,7 @@ function GalleryNavigationBar({
 			unlisten.then((fn) => fn());
 			unlistenPresence.then((fn) => fn());
 		};
-	}, []);
+	}, [setPhotos]);
 
 	const handleEditClick = () => {
 		if (selectedImages.length > 0) {
@@ -136,30 +131,27 @@ function GalleryNavigationBar({
 					authorFilter={authorFilter}
 					setAuthorFilter={setAuthorFilter}
 				/>
-				<div
+				<Button
+					variant="outline"
 					onMouseEnter={() => setShowPeers(true)}
 					onMouseLeave={() => {
 						if (!pinnedPeers) {
 							setShowPeers(false);
 						}
 					}}
+					onClick={() => {
+						setPinnedPeers((prev) => {
+							const next = !prev;
+							setShowPeers(next);
+							return next;
+						});
+					}}
 				>
-					<Button
-						variant="outline"
-						onClick={() => {
-							setPinnedPeers((prev) => {
-								const next = !prev;
-								setShowPeers(next);
-								return next;
-							});
-						}}
-					>
-						<span
-							className={`inline-block h-2 w-2 rounded-full ${onlineDotClass}`}
-						/>
-						{onlineLabel}
-					</Button>
-				</div>
+					<span
+						className={`inline-block h-2 w-2 rounded-full ${onlineDotClass}`}
+					/>
+					{onlineLabel}
+				</Button>
 				{selectedImages.length > 0 && (
 					<Button
 						variant="destructive"
@@ -258,30 +250,36 @@ function AlbumPhoto({
 }: {
 	image: Photo;
 	selectedImages: Readonly<Photo[]>;
-	setSelectedImages: React.Dispatch<React.SetStateAction<Readonly<Photo[]>>>;
+	setSelectedImages: Dispatch<SetStateAction<Readonly<Photo[]>>>;
 }) {
 	const isSelected = useMemo(
 		() => selectedImages.some((img) => img.id === image.id),
-		[image],
+		[image, selectedImages],
 	);
 
-	const handleImageClick = useCallback((image: Photo) => {
-		setSelectedImages((prev) => {
-			const isSelected = prev.some((img) => img.id === image.id);
-			if (isSelected) {
-				// Deselect if already selected
-				return prev.filter((img) => img.id !== image.id);
-			} else if (prev.length < 2) {
-				// Select if less than 2 images selected
-				return [...prev, image];
-			}
-			// Max 2 images, don't add more
-			return prev;
-		});
-	}, []);
+	const handleImageClick = useCallback(
+		(image: Photo) => {
+			setSelectedImages((prev) => {
+				const isSelected = prev.some((img) => img.id === image.id);
+				if (isSelected) {
+					// Deselect if already selected
+					return prev.filter((img) => img.id !== image.id);
+				} else if (prev.length < 2) {
+					// Select if less than 2 images selected
+					return [...prev, image];
+				}
+				// Max 2 images, don't add more
+				return prev;
+			});
+		},
+		[setSelectedImages],
+	);
+
+	const syncStatus = (image as { sync_status?: SyncStatus }).sync_status;
 
 	return (
-		<div
+		<button
+			type="button"
 			key={image.id}
 			onClick={() => handleImageClick(image)}
 			className={twMerge(
@@ -299,16 +297,16 @@ function AlbumPhoto({
 			<div
 				className={twMerge(
 					`absolute top-2 left-2 rounded-full px-2 py-1 text-xs font-medium`,
-					image.sync_status === SyncStatus.SYNCED
+					syncStatus === SyncStatus.SYNCED
 						? "bg-green-500"
-						: image.sync_status === SyncStatus.PENDING
+						: syncStatus === SyncStatus.PENDING
 							? "bg-yellow-500"
-							: image.sync_status === SyncStatus.DISCONNECTED
+							: syncStatus === SyncStatus.DISCONNECTED
 								? "bg-red-500"
 								: "bg-gray-500",
 				)}
 			>
-				{getSyncStatusLabel(image.sync_status)}
+				{getSyncStatusLabel(syncStatus)}
 			</div>
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
@@ -320,7 +318,7 @@ function AlbumPhoto({
 					</span>
 				</div>
 			)}
-		</div>
+		</button>
 	);
 }
 

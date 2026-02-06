@@ -16,7 +16,6 @@ const STATE_DOC_ID: &str = "root";
 const PHOTOS_COLLECTION: &str = "photos";
 const SET_LIBRARY_EVENT: &str = "SetLibrary";
 const PRESENCE_EVENT: &str = "Presence";
-const SYNC_INFO_QUERY: &str = "SELECT * FROM system:data_sync_info WHERE is_ditto_server = true ORDER BY documents.synced_up_to_local_commit_id DESC LIMIT 1";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ImageMetadata {
@@ -44,14 +43,6 @@ pub struct Photo {
     pub config: Option<PhotoConfig>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum SyncStatus {
-    Synced,
-    Pending,
-    Disconnected,
-    Unknown,
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AppAction {
@@ -80,10 +71,20 @@ struct PhotoDocument {
     image_path: String,
     base64: String,
     #[serde(default)]
-    content_commit_id: Option<u64>,
-    #[serde(default)]
     author_peer_id: Option<String>,
     pub config: Option<PhotoConfig>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct SyncScopesArgs {
+    #[serde(rename = "syncScopes")]
+    sync_scopes: SyncScopes,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct SyncScopes {
+    #[serde(rename = "photos")]
+    photos: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -92,7 +93,6 @@ pub struct PhotoPayload {
     pub filename: String,
     pub image_path: String,
     pub base64: String,
-    pub sync_status: SyncStatus,
     pub author_peer_id: Option<String>,
     pub config: Option<PhotoConfig>,
 }
@@ -115,19 +115,11 @@ struct PresencePayload {
     remote_peers: Vec<PresencePeerPayload>,
 }
 
-#[derive(Clone, Debug, Default)]
-struct SyncInfo {
-    connected: bool,
-    synced_up_to_local_commit_id: Option<u64>,
-}
-
 pub struct DittoRepository {
     state: Arc<RwLock<AppState>>,
-    sync_info: Arc<RwLock<SyncInfo>>,
     ditto: Arc<Ditto>,
     _observer: Arc<StoreObserver>,
     _photos_observer: Arc<StoreObserver>,
-    _sync_observer: Arc<StoreObserver>,
     _presence_observer: PresenceObserver,
 }
 
@@ -209,6 +201,20 @@ impl DittoRepository {
             println!("Transport config: {:#?}", transport_config);
         });
 
+        let sync_scopes = SyncScopesArgs {
+            sync_scopes: SyncScopes {
+                photos: "SmallPeersOnly".to_string(),
+            },
+        };
+        ditto
+            .store()
+            .execute_v2((
+                "ALTER SYSTEM SET USER_COLLECTION_SYNC_SCOPES = :syncScopes",
+                sync_scopes,
+            ))
+            .await
+            .map_err(|e| format!("Failed to set Ditto sync scopes: {e}"))?;
+
         ditto
             .start_sync()
             .map_err(|e| format!("Failed to start Ditto sync: {e}"))?;
@@ -216,22 +222,18 @@ impl DittoRepository {
         ditto.sync().register_subscription_v2("SELECT * FROM photos").map_err(|e| format!("Failed to register subscription: {e}"))?;
 
         let initial_state = load_state(ditto.as_ref()).await?;
-        let sync_info = Arc::new(RwLock::new(load_sync_info(ditto.as_ref()).await?));
         let state = Arc::new(RwLock::new(initial_state));
         let observer = install_state_observer(ditto.as_ref(), state.clone())?;
-        let sync_observer = install_sync_observer(ditto.clone(), app, sync_info.clone())?;
-        let photos_observer = install_photos_observer(ditto.as_ref(), app, sync_info.clone())?;
+        let photos_observer = install_photos_observer(ditto.as_ref(), app)?;
         let presence_observer = install_presence_observer(ditto.clone(), app)?;
-        emit_library_snapshot(ditto.as_ref(), app, sync_info.clone()).await?;
+        emit_library_snapshot(ditto.as_ref(), app).await?;
         emit_presence_snapshot(ditto.as_ref(), app)?;
 
         Ok(Self {
             state,
-            sync_info,
             ditto,
             _observer: observer,
             _photos_observer: photos_observer,
-            _sync_observer: sync_observer,
             _presence_observer: presence_observer,
         })
     }
@@ -268,6 +270,8 @@ impl DittoRepository {
             .clone();
         let mut seen = std::collections::HashSet::new();
 
+        let mut docs = Vec::new();
+
         for image in images {
             let doc_id = image.id.clone();
 
@@ -280,28 +284,26 @@ impl DittoRepository {
                 filename: image.filename.clone(),
                 image_path: image.image_path.clone(),
                 base64: image.base64.clone(),
-                content_commit_id: None,
                 author_peer_id: Some(author_peer_id.clone()),
                 config: image.config.clone(),
             };
 
-            let result = store
-                .execute_v2((
-                    format!("INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:doc) ON ID CONFLICT DO UPDATE"),
-                    serde_json::json!({ "doc": doc }),
-                ))
-                .await
-                .map_err(|e| format!("Failed to upsert Ditto photo: {e}"))?;
-            if let Some(commit_id) = result.commit_id() {
-                store
-                    .execute_v2((
-                        format!("UPDATE {PHOTOS_COLLECTION} SET content_commit_id = :commit_id WHERE _id = :id"),
-                        serde_json::json!({ "commit_id": commit_id, "id": doc_id }),
-                    ))
-                    .await
-                    .map_err(|e| format!("Failed to store photo commit id: {e}"))?;
-            }
+            docs.push(doc);
         }
+
+        if docs.is_empty() {
+            return Ok(());
+        }
+
+        store
+            .execute_v2((
+                format!(
+                    "INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:docs) ON ID CONFLICT DO UPDATE"
+                ),
+                serde_json::json!({ "docs": docs }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to upsert Ditto photos: {e}"))?;
 
         Ok(())
     }
@@ -312,12 +314,7 @@ impl DittoRepository {
             .execute_v2(format!("SELECT * FROM {PHOTOS_COLLECTION}"))
             .await
             .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
-        let sync_info = self
-            .sync_info
-            .read()
-            .map(|info| info.clone())
-            .unwrap_or_default();
-        Ok(collect_photo_payloads(&result, &sync_info))
+        Ok(collect_photo_payloads(&result))
     }
 
     pub async fn remove_photo(&self, id: &str) -> Result<(), String> {
@@ -359,6 +356,10 @@ impl DittoRepository {
             .await
             .map_err(|e| format!("Failed to update photo config: {e}"))?;
         Ok(())
+    }
+
+    pub async fn emit_library_snapshot(&self, app: &AppHandle) -> Result<(), String> {
+        emit_library_snapshot(self.ditto.as_ref(), app).await
     }
 }
 
@@ -484,22 +485,15 @@ fn normalize_state(mut state: AppState) -> AppState {
     state
 }
 
-fn install_photos_observer(
-    ditto: &Ditto,
-    app: &AppHandle,
-    sync_info: Arc<RwLock<SyncInfo>>,
-) -> Result<Arc<StoreObserver>, String> {
+fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreObserver>, String> {
     let store = ditto.store();
     let app_handle = app.clone();
     let query = format!("SELECT * FROM {PHOTOS_COLLECTION}");
     store
         .register_observer_v2(query, move |query_result| {
-            let sync_info = sync_info
-                .read()
-                .map(|info| info.clone())
-                .unwrap_or_default();
-            let photos = collect_photo_payloads(&query_result, &sync_info);
-            let payload = SetLibraryPayload { photos };
+            println!("<=== Emitting SetLibrary");
+            let photos = collect_photo_payloads(&query_result);
+            let payload: SetLibraryPayload = SetLibraryPayload { photos };
             if let Err(error) = app_handle.emit(SET_LIBRARY_EVENT, payload) {
                 eprintln!("{error}");
             }
@@ -523,23 +517,16 @@ fn install_presence_observer(
         .map_err(|e| format!("Failed to register presence observer: {e}"))
 }
 
-async fn emit_library_snapshot(
-    ditto: &Ditto,
-    app: &AppHandle,
-    sync_info: Arc<RwLock<SyncInfo>>,
-) -> Result<(), String> {
+async fn emit_library_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), String> {
     let store = ditto.store();
     let result = store
         .execute_v2(format!("SELECT * FROM {PHOTOS_COLLECTION}"))
         .await
         .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
-    let sync_info = sync_info
-        .read()
-        .map(|info| info.clone())
-        .unwrap_or_default();
     let payload = SetLibraryPayload {
-        photos: collect_photo_payloads(&result, &sync_info),
+        photos: collect_photo_payloads(&result),
     };
+    println!("<=== Emitting SetLibrary");
     app.emit(SET_LIBRARY_EVENT, payload)
         .map_err(|e| format!("Failed to emit SetLibrary: {e}"))
 }
@@ -572,104 +559,21 @@ fn build_presence_peer_payload(peer: &Peer) -> PresencePeerPayload {
     }
 }
 
-fn collect_photo_payloads(query_result: &QueryResult, sync_info: &SyncInfo) -> Vec<PhotoPayload> {
+fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
     query_result
         .iter()
         .filter_map(|item| item.deserialize_value::<PhotoDocument>().ok())
         .map(|doc| {
-            let sync_status = compute_sync_status(&doc, sync_info);
             PhotoPayload {
                 id: doc._id,
                 filename: doc.filename,
                 image_path: doc.image_path,
                 base64: doc.base64,
-                sync_status,
                 author_peer_id: doc.author_peer_id,
                 config: doc.config,
             }
         })
         .collect()
-}
-
-fn compute_sync_status(doc: &PhotoDocument, sync_info: &SyncInfo) -> SyncStatus {
-    if !sync_info.connected {
-        return SyncStatus::Disconnected;
-    }
-    match (doc.content_commit_id, sync_info.synced_up_to_local_commit_id) {
-        (Some(local_commit_id), Some(synced_up_to)) => {
-            if synced_up_to >= local_commit_id {
-                SyncStatus::Synced
-            } else {
-                SyncStatus::Pending
-            }
-        }
-        (Some(_), None) => SyncStatus::Unknown,
-        (None, _) => SyncStatus::Unknown,
-    }
-}
-
-async fn load_sync_info(ditto: &Ditto) -> Result<SyncInfo, String> {
-    let store = ditto.store();
-    let result = store
-        .execute_v2((SYNC_INFO_QUERY.to_string(), serde_json::json!({})))
-        .await
-        .map_err(|e| format!("Failed to query Ditto sync info: {e}"))?;
-    Ok(extract_sync_info(&result))
-}
-
-fn install_sync_observer(
-    ditto: Arc<Ditto>,
-    app: &AppHandle,
-    sync_info: Arc<RwLock<SyncInfo>>,
-) -> Result<Arc<StoreObserver>, String> {
-    let ditto_for_observer = ditto.clone();
-    let store = ditto.store();
-    let app_handle = app.clone();
-    store
-        .register_observer_v2(SYNC_INFO_QUERY.to_string(), move |query_result| {
-            let updated = extract_sync_info(&query_result);
-            if let Ok(mut guard) = sync_info.write() {
-                *guard = updated;
-            }
-            let _ = tauri::async_runtime::spawn({
-                let app_handle = app_handle.clone();
-                let ditto = ditto_for_observer.clone();
-                let sync_info = sync_info.clone();
-                async move {
-                    let _ = emit_library_snapshot(&ditto, &app_handle, sync_info).await;
-                }
-            });
-        })
-        .map_err(|e| format!("Failed to register sync observer: {e}"))
-}
-
-fn extract_sync_info(result: &QueryResult) -> SyncInfo {
-    let Some(item) = result.iter().next() else {
-        return SyncInfo::default();
-    };
-    let value: serde_json::Value = match item.deserialize_value() {
-        Ok(value) => value,
-        Err(_) => return SyncInfo::default(),
-    };
-    let documents = value
-        .get("documents")
-        .and_then(|doc| doc.as_object())
-        .or_else(|| value.get("doc").and_then(|doc| doc.as_object()))
-        .or_else(|| value.as_object())
-        .cloned()
-        .unwrap_or_default();
-    let connected = documents
-        .get("sync_session_status")
-        .and_then(|status| status.as_str())
-        .map(|status| status.to_lowercase().contains("connected"))
-        .unwrap_or_else(|| documents.get("synced_up_to_local_commit_id").is_some());
-    let synced_up_to_local_commit_id = documents
-        .get("synced_up_to_local_commit_id")
-        .and_then(|value| value.as_u64());
-    SyncInfo {
-        connected,
-        synced_up_to_local_commit_id,
-    }
 }
 
 
