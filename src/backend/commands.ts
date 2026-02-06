@@ -6,16 +6,16 @@ type CommandEntry = {
   result: Schema.Schema<any, any, any>;
 };
 
-const PhotoSchema = Schema.Struct({ id: Schema.String });
-const ListPhotosArgsSchema = Schema.Struct({});
-const ListPhotosResultSchema = Schema.Struct({
+const PhotoSchema = Schema.Struct({ path: Schema.String, content: Schema.Uint8ArrayFromBase64 });
+const OpenFolderArgsSchema = Schema.Struct({folder: Schema.String});
+const OpenFolderResultSchema = Schema.Struct({
   photos: Schema.Array(PhotoSchema),
 });
 
 export const CommandSchemas = {
-  list_photos: {
-    args: ListPhotosArgsSchema,
-    result: ListPhotosResultSchema,
+  open_folder: {
+    args: OpenFolderArgsSchema,
+    result: OpenFolderResultSchema,
   },
 } as const satisfies Record<string, CommandEntry>;
 
