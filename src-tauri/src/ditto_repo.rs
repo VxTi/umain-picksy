@@ -114,6 +114,7 @@ impl DittoRepository {
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
 
         ditto.update_transport_config(|transport_config| {
+            transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
             transport_config.peer_to_peer.bluetooth_le.enabled = false;
