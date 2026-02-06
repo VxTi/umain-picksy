@@ -17,9 +17,6 @@ function Edit() {
           <p className="text-sm text-muted-foreground">
             {images.length} image(s) selected for editing
           </p>
-          <Button variant="outline" onClick={() => navigate("/gallery")}>
-            Back to Gallery
-          </Button>
         </div>
 
         {images.length === 0 ? (
