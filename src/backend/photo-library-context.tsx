@@ -42,11 +42,8 @@ export function PhotoLibraryProvider({
 		[],
 	);
 
-	const removePhotoFromLibrary = useCallbackEffect(
-		(photo: Photo) =>
-			invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { photoId: photo.id }),
-		[],
-	);
+	const removePhotoFromLibrary = (photo: Photo) =>
+		invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { photoId: photo.id });
 
 	const addPhotosFromFolder = useCallbackEffect(
 		() => invoke(CommandType.ADD_PHOTOS_FROM_FOLDER, {}),

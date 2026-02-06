@@ -1,13 +1,17 @@
 use crate::ditto_repo::{AppAction, DittoRepository, Photo};
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
+use image::GenericImage;
 use rexif::{ExifTag, TagValue};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
+use std::time::Instant;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
+
+const UPSERT_BATCH_SIZE: usize = 25;
 
 #[derive(Debug, Serialize)]
 pub struct ImageMetadata {
@@ -195,12 +199,23 @@ pub async fn remove_image_from_album(
 }
 
 fn process_image_file(path: String) -> Result<Photo, String> {
+    let start = Instant::now();
+    println!("Import: processing image file: {}", path.clone());
+    let step = Instant::now();
     let img = image::open(&path).map_err(|e| e.to_string())?;
+    println!("Import: image opened ({:?})", step.elapsed());
+    println!("dims = {:?}", img.to_rgba8().dimensions());
+    println!("color = {:?}", img.color());
+    let step = Instant::now();
     let id = generate_image_id(&img);
+    println!("Import: image id generated ({:?})", step.elapsed());
+    let step = Instant::now();
     let thumbnail = img.thumbnail(300, 300);
-
+    println!("Import: thumbnail generated ({:?})", step.elapsed());
+    let step = Instant::now();
     let base64_content = image_to_base64(&thumbnail, ImageFormat::Jpeg);
-
+    println!("Import: base64 content generated ({:?})", step.elapsed());
+    println!("Import: image processing total ({:?})", start.elapsed());
     Ok(Photo {
         id,
         image_path: path,
@@ -216,6 +231,7 @@ pub async fn select_images_directory(
 ) -> Result<Option<Vec<Photo>>, String> {
     use tauri_plugin_dialog::FilePath;
     use tauri_plugin_store::StoreExt;
+    use std::time::Instant;
 
     let (tx, rx) = std::sync::mpsc::channel();
 
@@ -226,6 +242,7 @@ pub async fn select_images_directory(
     let folder = rx.recv().map_err(|e| e.to_string())?;
 
     if let Some(folder_path) = folder {
+        let total_start = Instant::now();
         let path_str = match folder_path {
             FilePath::Path(p) => p.to_string_lossy().to_string(),
             FilePath::Url(u) => u
@@ -235,7 +252,14 @@ pub async fn select_images_directory(
                 .to_string(),
         };
 
+        println!(
+            "Import: selected folder '{}', starting scan...",
+            path_str
+        );
+
         let mut images: Vec<Photo> = Vec::new();
+        let mut pending: Vec<Photo> = Vec::new();
+        let mut processed_count: usize = 0;
 
         for entry in WalkDir::new(&path_str).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
@@ -245,14 +269,42 @@ pub async fn select_images_directory(
                         ext.as_str(),
                         "jpg" | "jpeg" | "png" | "heic" | "webp" | "tiff"
                     ) {
+                        println!("Import: processing image file: {}", entry.path().to_string_lossy());
                         let path = entry.path().to_string_lossy().to_string();
 
                         if let Ok(photo) = process_image_file(path) {
-                            images.push(photo);
+                            println!("Import: processed image file: {}", entry.path().to_string_lossy());
+                            images.push(photo.clone());
+                            pending.push(photo);
+                            processed_count += 1;
+                            if pending.len() >= UPSERT_BATCH_SIZE {
+                                let batch_start = Instant::now();
+                                println!("Import: upserting batch of {} photos", pending.len());
+                                repo.upsert_photos_from_paths(&pending).await?;
+                                println!(
+                                    "Import: upserted batch of {} photos ({} total processed) in {:?}",
+                                    UPSERT_BATCH_SIZE,
+                                    processed_count,
+                                    batch_start.elapsed()
+                                );
+                                println!("Import: cleared pending photos");
+                                pending.clear();
+                            }
                         }
                     }
                 }
             }
+        }
+
+        if !pending.is_empty() {
+            let batch_start = Instant::now();
+            repo.upsert_photos_from_paths(&pending).await?;
+            println!(
+                "Import: upserted final batch of {} photos ({} total processed) in {:?}",
+                pending.len(),
+                processed_count,
+                batch_start.elapsed()
+            );
         }
 
         // Persist the path
@@ -265,7 +317,11 @@ pub async fn select_images_directory(
         })
         .await?;
 
-        repo.upsert_photos_from_paths(&images).await?;
+        println!(
+            "Import: finished dispatch for {} photos in {:?}",
+            images.len(),
+            total_start.elapsed()
+        );
 
         Ok(Some(images))
     } else {
@@ -300,6 +356,7 @@ pub async fn add_photo_to_library(
     if let Some(file_paths) = files {
         let mut photos = Vec::new();
         let mut current_state = repo.get_state();
+        let mut pending: Vec<Photo> = Vec::new();
 
         for file_path in file_paths {
             let path_str = match file_path {
@@ -313,8 +370,14 @@ pub async fn add_photo_to_library(
 
             // Using unwrap or continue to skip bad files instead of failing the whole batch
             if let Ok(photo) = process_image_file(path_str) {
-                photos.push(photo.clone());
-                current_state.images.push(photo);
+                let photo_clone = photo.clone();
+                photos.push(photo_clone.clone());
+                current_state.images.push(photo_clone.clone());
+                pending.push(photo_clone);
+                if pending.len() >= UPSERT_BATCH_SIZE {
+                    repo.upsert_photos_from_paths(&pending).await?;
+                    pending.clear();
+                }
             }
         }
 
@@ -322,12 +385,14 @@ pub async fn add_photo_to_library(
             return Ok(None);
         }
 
+        if !pending.is_empty() {
+            repo.upsert_photos_from_paths(&pending).await?;
+        }
+
         repo.dispatch(AppAction::SetImageLibraryContent {
             images: current_state.images,
         })
         .await?;
-
-        repo.upsert_photos_from_paths(&photos).await?;
 
         Ok(Some(photos))
     } else {

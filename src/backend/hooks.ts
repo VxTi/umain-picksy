@@ -4,6 +4,7 @@ import { useEffectEffect } from "../effect-react";
 import { SetLibraryResult } from "./events";
 import { listen } from "./listen";
 import { invoke } from "./invoke";
+import { CommandType } from "./commands";
 
 export function usePhotos() {
 	const [photos, setPhotos] = useState<SetLibraryResult["photos"]>([]);
@@ -17,7 +18,7 @@ export function usePhotos() {
 					Effect.logError("Failed to listen for SetLibrary", cause),
 				),
 			);
-			yield* invoke("get_library_photos", {}).pipe(
+			yield* invoke(CommandType.GET_PHOTOS_FROM_LIBRARY, {}).pipe(
 				Effect.tap((photos) => setPhotos(photos)),
 				Effect.catchAllCause((cause) =>
 					Effect.logError("Failed to get library photos", cause),

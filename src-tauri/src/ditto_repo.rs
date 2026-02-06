@@ -16,7 +16,7 @@ const STATE_DOC_ID: &str = "root";
 const PHOTOS_COLLECTION: &str = "photos";
 const SET_LIBRARY_EVENT: &str = "SetLibrary";
 const PRESENCE_EVENT: &str = "Presence";
-const SYNC_INFO_QUERY: &str = "SELECT * FROM system:data_sync_info WHERE is_ditto_server = true ORDER BY documents.synced_up_to_local_commit_id DESC LIMIT 1";
+const SYNC_INFO_QUERY: &str = "SELECT * FROM system:data_sync_info";
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ImageMetadata {
@@ -75,6 +75,18 @@ struct PhotoDocument {
     content_commit_id: Option<u64>,
     #[serde(default)]
     author_peer_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct SyncScopesArgs {
+    #[serde(rename = "syncScopes")]
+    sync_scopes: SyncScopes,
+}
+
+#[derive(Clone, Debug, Serialize)]
+struct SyncScopes {
+    #[serde(rename = "photos")]
+    photos: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -199,6 +211,20 @@ impl DittoRepository {
             println!("Transport config: {:#?}", transport_config);
         });
 
+        let sync_scopes = SyncScopesArgs {
+            sync_scopes: SyncScopes {
+                photos: "SmallPeersOnly".to_string(),
+            },
+        };
+        ditto
+            .store()
+            .execute_v2((
+                "ALTER SYSTEM SET USER_COLLECTION_SYNC_SCOPES = :syncScopes",
+                sync_scopes,
+            ))
+            .await
+            .map_err(|e| format!("Failed to set Ditto sync scopes: {e}"))?;
+
         ditto
             .start_sync()
             .map_err(|e| format!("Failed to start Ditto sync: {e}"))?;
@@ -258,6 +284,9 @@ impl DittoRepository {
             .clone();
         let mut seen = std::collections::HashSet::new();
 
+        let mut docs = Vec::new();
+        let mut doc_ids = Vec::new();
+
         for image in images {
             let filename = std::path::Path::new(&image.image_path)
                 .file_name()
@@ -279,22 +308,42 @@ impl DittoRepository {
                 author_peer_id: Some(author_peer_id.clone()),
             };
 
-            let result = store
-                .execute_v2((
-                    format!("INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:doc) ON ID CONFLICT DO UPDATE"),
-                    serde_json::json!({ "doc": doc }),
-                ))
-                .await
-                .map_err(|e| format!("Failed to upsert Ditto photo: {e}"))?;
-            if let Some(commit_id) = result.commit_id() {
-                store
-                    .execute_v2((
-                        format!("UPDATE {PHOTOS_COLLECTION} SET content_commit_id = :commit_id WHERE _id = :id"),
-                        serde_json::json!({ "commit_id": commit_id, "id": doc_id }),
-                    ))
-                    .await
-                    .map_err(|e| format!("Failed to store photo commit id: {e}"))?;
-            }
+            docs.push(doc);
+            doc_ids.push(doc_id);
+        }
+
+        if docs.is_empty() {
+            return Ok(());
+        }
+
+        let result = store
+            .execute_v2((
+                format!(
+                    "INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:docs) ON ID CONFLICT DO UPDATE"
+                ),
+                serde_json::json!({ "docs": docs }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to upsert Ditto photos: {e}"))?;
+
+        if let Some(commit_id) = result.commit_id() {
+            let ditto = self.ditto.clone();
+            tauri::async_runtime::spawn(async move {
+                let store = ditto.store();
+                for id in doc_ids {
+                    if let Err(error) = store
+                        .execute_v2((
+                            format!(
+                                "UPDATE {PHOTOS_COLLECTION} SET content_commit_id = :commit_id WHERE _id = :id"
+                            ),
+                            serde_json::json!({ "commit_id": commit_id, "id": id }),
+                        ))
+                        .await
+                    {
+                        eprintln!("Failed to store photo commit id: {error}");
+                    }
+                }
+            });
         }
 
         Ok(())
@@ -572,16 +621,16 @@ fn compute_sync_status(doc: &PhotoDocument, sync_info: &SyncInfo) -> SyncStatus 
     if !sync_info.connected {
         return SyncStatus::Disconnected;
     }
-    match (doc.content_commit_id, sync_info.synced_up_to_local_commit_id) {
-        (Some(local_commit_id), Some(synced_up_to)) => {
-            if synced_up_to >= local_commit_id {
-                SyncStatus::Synced
-            } else {
-                SyncStatus::Pending
-            }
+    if let (Some(local_commit_id), Some(synced_up_to)) =
+        (doc.content_commit_id, sync_info.synced_up_to_local_commit_id)
+    {
+        if synced_up_to >= local_commit_id {
+            SyncStatus::Synced
+        } else {
+            SyncStatus::Pending
         }
-        (Some(_), None) => SyncStatus::Unknown,
-        (None, _) => SyncStatus::Unknown,
+    } else {
+        SyncStatus::Unknown
     }
 }
 
@@ -621,28 +670,43 @@ fn install_sync_observer(
 }
 
 fn extract_sync_info(result: &QueryResult) -> SyncInfo {
-    let Some(item) = result.iter().next() else {
-        return SyncInfo::default();
-    };
-    let value: serde_json::Value = match item.deserialize_value() {
-        Ok(value) => value,
-        Err(_) => return SyncInfo::default(),
-    };
-    let documents = value
-        .get("documents")
-        .and_then(|doc| doc.as_object())
-        .or_else(|| value.get("doc").and_then(|doc| doc.as_object()))
-        .or_else(|| value.as_object())
-        .cloned()
-        .unwrap_or_default();
-    let connected = documents
-        .get("sync_session_status")
-        .and_then(|status| status.as_str())
-        .map(|status| status.to_lowercase().contains("connected"))
-        .unwrap_or_else(|| documents.get("synced_up_to_local_commit_id").is_some());
-    let synced_up_to_local_commit_id = documents
-        .get("synced_up_to_local_commit_id")
-        .and_then(|value| value.as_u64());
+    let mut connected = false;
+    let mut synced_up_to_local_commit_id: Option<u64> = None;
+
+    for item in result.iter() {
+        let value: serde_json::Value = match item.deserialize_value() {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let documents = value
+            .get("documents")
+            .and_then(|doc| doc.as_object())
+            .or_else(|| value.get("doc").and_then(|doc| doc.as_object()))
+            .or_else(|| value.as_object())
+            .cloned()
+            .unwrap_or_default();
+
+        let is_connected = documents
+            .get("sync_session_status")
+            .and_then(|status| status.as_str())
+            .map(|status| status.to_lowercase().contains("connected"))
+            .unwrap_or_else(|| documents.get("synced_up_to_local_commit_id").is_some());
+        if is_connected {
+            connected = true;
+        }
+
+        if let Some(peer_synced_up_to) = documents
+            .get("synced_up_to_local_commit_id")
+            .and_then(|value| value.as_u64())
+        {
+            synced_up_to_local_commit_id = Some(
+                synced_up_to_local_commit_id
+                    .map(|current| current.max(peer_synced_up_to))
+                    .unwrap_or(peer_synced_up_to),
+            );
+        }
+    }
+
     SyncInfo {
         connected,
         synced_up_to_local_commit_id,
