@@ -5,8 +5,8 @@ use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
 
-mod vision;
-use vision::{analyze_image_metadata, recognize_faces};
+mod commands;
+use commands::image_analysis::{analyze_image_metadata, recognize_faces};
 
 #[tauri::command]
 async fn select_source_folder(
