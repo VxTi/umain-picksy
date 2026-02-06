@@ -1,14 +1,14 @@
-import { usePhotoLibrary }          from '@/backend/photo-library-context';
-import { EventType }                from "@/lib/events";
-import { SaveIcon }                 from "lucide-react";
+import { usePhotoLibrary } from "@/backend/photo-library-context";
+import { EventType } from "@/lib/events";
+import { SaveIcon } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect }      from "react";
-import { listen }                   from "@tauri-apps/api/event";
-import { Button }                   from "@/components/ui/button";
-import { twMerge }                  from "tailwind-merge";
-import PhotoEditorSidebar           from "../components/photo-editor-sidebar";
-import { PhotoComponent }           from "./PhotoComponent";
-import type { ImageItem }           from "./Gallery";
+import { useState, useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { Button } from "@/components/ui/button";
+import { twMerge } from "tailwind-merge";
+import PhotoEditorSidebar from "../components/photo-editor-sidebar";
+import { PhotoComponent } from "./PhotoComponent";
+import type { ImageItem } from "./Gallery";
 
 function PhotoEditor() {
 	const { photos } = usePhotoLibrary();
