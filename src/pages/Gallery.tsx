@@ -1,11 +1,11 @@
 import { listen } from "@tauri-apps/api/event";
 import { getLibraryPhotos } from "@/lib/library";
 import { openEditWindow } from "@/lib/windows";
-import { PencilIcon, Trash2Icon } from 'lucide-react';
+import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { invoke } from "@tauri-apps/api/core";
-import type { Photo } from '@/backend/commandStream';
+import type { Photo } from "@/backend/commandStream";
 
 export interface ImageItem {
 	id: string;
@@ -81,15 +81,16 @@ function Gallery() {
 				await invoke("remove_image_from_album", { id: image.id });
 			}
 			// Update local state by removing the deleted photos
-			const deletedIds = new Set(selectedImages.map(img => img.id));
-			setPhotos(prev => prev.filter(p => !deletedIds.has(p.id)));
+			const deletedIds = new Set(selectedImages.map((img) => img.id));
+			setPhotos((prev) => prev.filter((p) => !deletedIds.has(p.id)));
 			setSelectedImages([]);
 		} catch (error) {
 			console.error("Failed to delete images:", error);
 		}
 	};
 
-	const isSelected = (id: string) => selectedImages.some((img) => img.id === id);
+	const isSelected = (id: string) =>
+		selectedImages.some((img) => img.id === id);
 
 	return (
 		<main className="min-h-screen bg-background">
@@ -146,9 +147,8 @@ function Gallery() {
 								{isSelected(image.id) && (
 									<div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
 										<span className="text-white text-xs font-bold">
-											{
-												selectedImages.findIndex((img) => img.id === image.id) + 1
-											}
+											{selectedImages.findIndex((img) => img.id === image.id) +
+												1}
 										</span>
 									</div>
 								)}

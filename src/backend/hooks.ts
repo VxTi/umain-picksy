@@ -6,25 +6,25 @@ import { listen } from "./listen";
 import { invoke } from "./invoke";
 
 export function usePhotos() {
-    const [photos, setPhotos] = useState<SetLibraryResult["photos"]>([]);
+	const [photos, setPhotos] = useState<SetLibraryResult["photos"]>([]);
 
-  useEffectEffect(
-    Effect.gen(function* () {
-      yield* listen("SetLibrary", (event) => {
-        setPhotos(event.photos);
-      }).pipe(
-        Effect.catchAllCause((cause) =>
-          Effect.logError("Failed to listen for SetLibrary", cause),
-        ),
-      );
-      yield* invoke("get_library_photos", {}).pipe(
-        Effect.tap((photos) => setPhotos(photos)),
-        Effect.catchAllCause((cause) =>
-          Effect.logError("Failed to get library photos", cause),
-        ),
-      );
-    }),
-    [],
-  );
-  return photos;
+	useEffectEffect(
+		Effect.gen(function* () {
+			yield* listen("SetLibrary", (event) => {
+				setPhotos(event.photos);
+			}).pipe(
+				Effect.catchAllCause((cause) =>
+					Effect.logError("Failed to listen for SetLibrary", cause),
+				),
+			);
+			yield* invoke("get_library_photos", {}).pipe(
+				Effect.tap((photos) => setPhotos(photos)),
+				Effect.catchAllCause((cause) =>
+					Effect.logError("Failed to get library photos", cause),
+				),
+			);
+		}),
+		[],
+	);
+	return photos;
 }

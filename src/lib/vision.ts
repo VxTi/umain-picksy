@@ -1,22 +1,22 @@
-import { Photo }  from '@/backend/commandStream';
+import { Photo } from "@/backend/commandStream";
 import { invoke } from "@tauri-apps/api/core";
 
 /**
  * Metadata extracted from an image.
  */
 export interface ImageMetadata {
-  datetime?: string;
-  latitude?: number;
-  longitude?: number;
-  make?: string;
-  model?: string;
+	datetime?: string;
+	latitude?: number;
+	longitude?: number;
+	make?: string;
+	model?: string;
 }
 
 /**
  * Result of a face recognition operation.
  */
 export interface FaceRecognitionResult {
-  matched_paths: string[];
+	matched_paths: string[];
 }
 
 /**
@@ -24,9 +24,11 @@ export interface FaceRecognitionResult {
  * @param path - The absolute path to the image file.
  * @returns A promise that resolves to the image metadata.
  */
-export async function analyzeImageMetadata(path: string): Promise<ImageMetadata> {
-  console.log('Path:' , path)
-  return await invoke<ImageMetadata>("analyze_image_metadata", { path });
+export async function analyzeImageMetadata(
+	path: string,
+): Promise<ImageMetadata> {
+	console.log("Path:", path);
+	return await invoke<ImageMetadata>("analyze_image_metadata", { path });
 }
 
 /**
@@ -37,15 +39,15 @@ export async function analyzeImageMetadata(path: string): Promise<ImageMetadata>
  * @returns A promise that resolves to a list of matching image paths.
  */
 export async function recognizeFaces(
-  targetImagePath: string,
-  targetName: string,
-  candidateImagePaths: string[]
+	targetImagePath: string,
+	targetName: string,
+	candidateImagePaths: string[],
 ): Promise<FaceRecognitionResult> {
-  return await invoke<FaceRecognitionResult>("recognize_faces", {
-    targetImagePath,
-    targetName,
-    candidateImagePaths,
-  });
+	return await invoke<FaceRecognitionResult>("recognize_faces", {
+		targetImagePath,
+		targetName,
+		candidateImagePaths,
+	});
 }
 
 /**
@@ -53,10 +55,9 @@ export async function recognizeFaces(
  * @returns A promise that resolves to a list of image paths or null if cancelled.
  */
 export async function selectSourceFolder(): Promise<Photo[] | null> {
-  return await invoke<Photo[] | null>("select_images_directory");
+	return await invoke<Photo[] | null>("select_images_directory");
 }
 
-
 export async function addPhotoToLibrary(): Promise<Photo | null> {
-  return await invoke<Photo | null>("add_photo_to_library");
-} 
+	return await invoke<Photo | null>("add_photo_to_library");
+}
