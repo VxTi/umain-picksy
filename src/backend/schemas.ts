@@ -16,8 +16,12 @@ export const MetadataSchema = Schema.Struct({
 
 export const PhotoSchema = Schema.Struct({
 	base64: Schema.String,
+	image_path: Schema.String,
 	id: Schema.String,
 	filename: Schema.String,
-	preview: Schema.optional(Schema.Uint8ArrayFromBase64),
 	metadata: Schema.optional(MetadataSchema),
 });
+
+export type Photo = Schema.Schema.Type<typeof PhotoSchema>;
+
+export type PhotoMetadata = Schema.Schema.Type<typeof MetadataSchema>;
