@@ -5,7 +5,9 @@ use tauri::{Manager, State};
 
 mod commands;
 
-use commands::image_analysis::{analyze_image_metadata, recognize_faces, select_images_directory};
+use commands::image_analysis::{
+    add_photo_to_library, analyze_image_metadata, recognize_faces, select_images_directory,
+};
 
 #[tauri::command]
 fn get_app_state(repo: State<'_, DittoRepository>) -> AppState {
@@ -36,6 +38,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             select_images_directory,
+            add_photo_to_library,
             analyze_image_metadata,
             recognize_faces,
             get_app_state,

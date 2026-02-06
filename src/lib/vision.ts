@@ -55,3 +55,8 @@ export async function recognizeFaces(
 export async function selectSourceFolder(): Promise<Photo[] | null> {
   return await invoke<Photo[] | null>("select_images_directory");
 }
+
+
+export async function addPhotoToLibrary(): Promise<Photo | null> {
+  return await invoke<Photo | null>("add_photo_to_library");
+} 

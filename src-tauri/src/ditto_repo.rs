@@ -112,7 +112,28 @@ impl DittoRepository {
             .disable_sync_with_v3()
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
 
+        ditto
+            .presence()
+            .set_connection_request_handler(|connection_request: ConnectionRequest| {
+                let connection_type = connection_request.connection_type();
+                let peer_key = connection_request.peer_key_string();
+                let peer_metadata = connection_request.peer_metadata_json_str();
+                let identity_metadata = connection_request.identity_service_metadata_json_str();
+
+                println!(
+                    "Connection request: type={connection_type:?}, peer_key={peer_key}, peer_metadata={peer_metadata}, identity_metadata={identity_metadata}"
+                );
+
+                ConnectionRequestAuthorization::Allow
+                // if (true) {
+                // } else {
+                //     ConnectionRequestAuthorization::Deny
+                // }
+            });
+
         ditto.update_transport_config(|transport_config| {
+            transport_config.enable_all_peer_to_peer();
+            transport_config.global.sync_group = 0; // all users in 1 big pool!
             transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
@@ -128,6 +149,8 @@ impl DittoRepository {
         ditto
             .start_sync()
             .map_err(|e| format!("Failed to start Ditto sync: {e}"))?;
+    
+        ditto.sync().register_subscription_v2("SELECT * FROM photos").map_err(|e| format!("Failed to register subscription: {e}"))?;
 
         let initial_state = load_state(&ditto).await?;
         let state = Arc::new(RwLock::new(initial_state));

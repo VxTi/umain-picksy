@@ -1,11 +1,19 @@
 import { usePhotos } from "@/backend/hooks";
 import { useCallback } from "react";
 
-import { selectSourceFolder, analyzeImageMetadata } from "@/lib/vision";
+import {
+  selectSourceFolder,
+  addPhotoToLibrary,
+  analyzeImageMetadata,
+} from "@/lib/vision";
 import PicksyView from "../PicksyView";
 
-function Home() {
+export default function Home() {
   const photos = usePhotos();
+
+  const handleAddPhoto = useCallback(async () => {
+    await addPhotoToLibrary();
+  }, []);
 
   const handleSelectFolder = useCallback(async () => {
     try {
@@ -25,9 +33,11 @@ function Home() {
 
   return (
     <main className="container">
-      <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
+      <PicksyView
+        photos={photos}
+        onSelectFolder={handleSelectFolder}
+        onAddPhoto={handleAddPhoto}
+      />
     </main>
   );
 }
-
-export default Home;

@@ -185,6 +185,21 @@ fn image_to_base64(img: &DynamicImage, format: ImageFormat) -> String {
     format!("data:{};base64,{}", mime_type, res_base64)
 }
 
+fn process_image_file(path: String) -> Result<Photo, String> {
+    let img = image::open(&path).map_err(|e| e.to_string())?;
+    let id = generate_image_id(&img);
+    let thumbnail = img.thumbnail(300, 300);
+
+    let base64_content = image_to_base64(&thumbnail, ImageFormat::Jpeg);
+
+    Ok(Photo {
+        id,
+        image_path: path,
+        base64: base64_content,
+        metadata: None,
+    })
+}
+
 #[tauri::command]
 pub async fn select_images_directory(
     app: AppHandle,
@@ -223,18 +238,9 @@ pub async fn select_images_directory(
                     ) {
                         let path = entry.path().to_string_lossy().to_string();
 
-                        let img = image::open(&path).map_err(|e| e.to_string())?;
-                        let id = generate_image_id(&img);
-                        let thumbnail = img.thumbnail(300, 300);
-
-                        let base64_content = image_to_base64(&thumbnail, ImageFormat::Jpeg);
-
-                        images.push(Photo {
-                            id,
-                            image_path: path,
-                            base64: base64_content,
-                            metadata: None,
-                        });
+                        if let Ok(photo) = process_image_file(path) {
+                            images.push(photo);
+                        }
                     }
                 }
             }
@@ -255,6 +261,68 @@ pub async fn select_images_directory(
         Ok(Some(images))
     } else {
         // No directory content
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub async fn add_photo_to_library(
+    app: AppHandle,
+    repo: State<'_, DittoRepository>,
+) -> Result<Option<Vec<Photo>>, String> {
+    use tauri_plugin_dialog::FilePath;
+
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    app.dialog()
+        .file()
+        .add_filter(
+            "Images",
+            &[
+                "jpg", "jpeg", "png", "heic", "webp", "tiff", "JPG", "JPEG", "PNG", "HEIC", "WEBP",
+                "TIFF",
+            ],
+        )
+        .pick_files(move |paths| {
+            tx.send(paths).unwrap();
+        });
+
+    let files = rx.recv().map_err(|e| e.to_string())?;
+
+    if let Some(file_paths) = files {
+        let mut photos = Vec::new();
+        let mut current_state = repo.get_state();
+
+        for file_path in file_paths {
+            let path_str = match file_path {
+                FilePath::Path(p) => p.to_string_lossy().to_string(),
+                FilePath::Url(u) => u
+                    .to_file_path()
+                    .map_err(|_| "Invalid URL".to_string())?
+                    .to_string_lossy()
+                    .to_string(),
+            };
+
+            // Using unwrap or continue to skip bad files instead of failing the whole batch
+            if let Ok(photo) = process_image_file(path_str) {
+                photos.push(photo.clone());
+                current_state.images.push(photo);
+            }
+        }
+
+        if photos.is_empty() {
+            return Ok(None);
+        }
+
+        repo.dispatch(AppAction::SetImageLibraryContent {
+            images: current_state.images,
+        })
+        .await?;
+
+        repo.upsert_photos_from_paths(&photos).await?;
+
+        Ok(Some(photos))
+    } else {
         Ok(None)
     }
 }
