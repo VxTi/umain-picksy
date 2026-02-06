@@ -3,6 +3,7 @@ use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
 use rexif::{ExifTag, TagValue};
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use std::io::Cursor;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
@@ -15,6 +16,13 @@ pub struct ImageMetadata {
     pub longitude: Option<f64>,
     pub make: Option<String>,
     pub model: Option<String>,
+}
+
+pub fn generate_image_id(img: &DynamicImage) -> String {
+    let thumb = img.resize_exact(300, 300, image::imageops::FilterType::Lanczos3);
+    let mut hasher = Sha256::new();
+    hasher.update(thumb.to_rgb8().as_raw());
+    format!("{:x}", hasher.finalize())
 }
 
 #[tauri::command]
@@ -216,11 +224,13 @@ pub async fn select_images_directory(
                         let path = entry.path().to_string_lossy().to_string();
 
                         let img = image::open(&path).map_err(|e| e.to_string())?;
+                        let id = generate_image_id(&img);
                         let thumbnail = img.thumbnail(300, 300);
 
                         let base64_content = image_to_base64(&thumbnail, ImageFormat::Jpeg);
 
                         images.push(Photo {
+                            id,
                             image_path: path,
                             base64: base64_content,
                             metadata: None,

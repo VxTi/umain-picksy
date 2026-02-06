@@ -13,7 +13,7 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="w-[420px] shadow-xl">
+      <Card className="w-105 shadow-xl">
         <CardContent className="flex flex-col items-center gap-6 p-8">
 
           {/* Logo placeholder */}
