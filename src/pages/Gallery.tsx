@@ -26,7 +26,7 @@ interface PresencePayload {
 	remote_peers: PresencePeer[];
 }
 
-function Gallery() {
+export default function Gallery() {
 	const { photos, removePhotoFromLibrary, setPhotos, loading } =
 		usePhotoLibrary();
 
@@ -295,6 +295,4 @@ function Gallery() {
 			</div>
 		</main>
 	);
-}
-
-export default Gallery;
+}}
