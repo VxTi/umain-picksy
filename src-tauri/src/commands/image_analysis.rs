@@ -3,7 +3,8 @@ use rexif::{ExifTag, TagValue};
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
-use crate::ditto_repo::{AppAction, DittoRepository};
+use crate::ditto_repo::{AppAction, DittoRepository, Image};
+use base64::{Engine as _, engine::{general_purpose}};
 
 #[derive(Debug, Serialize)]
 pub struct ImageMetadata {
@@ -148,7 +149,7 @@ fn contains_face(_path: &str) -> Result<bool, String> {
 pub async fn select_images_directory(
     app: AppHandle,
     repo: State<'_, DittoRepository>,
-) -> Result<Option<Vec<String>>, String> {
+) -> Result<Option<Vec<Image>>, String> {
     use tauri_plugin_dialog::FilePath;
     use tauri_plugin_store::StoreExt;
 
@@ -170,28 +171,30 @@ pub async fn select_images_directory(
                 .to_string(),
         };
 
-        let mut images: Vec<String> = Vec::new();
+        let mut images: Vec<Image> = Vec::new();
 
         for entry in WalkDir::new(&path_str).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
                 if let Some(ext) = entry.path().extension() {
                     let ext = ext.to_string_lossy().to_lowercase();
                     if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "heic" | "webp" | "tiff") {
-                        images.push(entry.path().to_string_lossy().to_string());
+                        let path = entry.path().to_string_lossy().to_string();
+
+                        let base64_content = general_purpose::STANDARD.encode(std::fs::read(entry.path()).unwrap());
+
+                        images.push(Image { image_path: path, base64: base64_content, metadata: None });
                     }
                 }
             }
         }
-        let image_count = images.len();
 
         // Persist the path
         let store = app.store("config.json").map_err(|e| e.to_string())?;
         store.set("library_path", serde_json::Value::String(path_str.clone()));
         store.save().map_err(|e| e.to_string())?;
 
-        repo.dispatch(AppAction::SetLibraryPath {
-            path: path_str.clone(),
-            image_count,
+        repo.dispatch(AppAction::SetImageLibraryContent {
+            images: images.clone(),
         })
             .await?;
 
@@ -199,6 +202,7 @@ pub async fn select_images_directory(
 
         Ok(Some(images))
     } else {
+        // No directory content
         Ok(None)
     }
 }

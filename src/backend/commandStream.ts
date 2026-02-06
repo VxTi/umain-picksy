@@ -1,6 +1,17 @@
 import { listen, type Event } from "@tauri-apps/api/event";
 
+export interface PhotoMetadata {
+   datetime?: string;
+   latitude?: number;
+   longitude?: number
+   make?: string,
+   model?: string,
+}
+
 export type Photo = {
+  base64: string;
+  image_path: string;
+  metadata?: PhotoMetadata;
   id: string;
   filename: string;
   path: string;

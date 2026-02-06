@@ -44,7 +44,7 @@ function App() {
 
   const handleSelectFolder = useCallback(async () => {
     try {
-      await selectSourceFolder();
+      console.log(await selectSourceFolder());
     } catch (error) {
       console.error("Failed to select source folder", error);
     }

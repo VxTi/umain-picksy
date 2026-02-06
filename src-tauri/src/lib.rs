@@ -1,11 +1,10 @@
 mod ditto_repo;
 
-use ditto_repo::{AppAction, AppState, DittoRepository, PhotoPayload};
-use tauri::{AppHandle, Manager, State};
-use tauri_plugin_dialog::DialogExt;
-use walkdir::WalkDir;
+use ditto_repo::{AppState, DittoRepository, PhotoPayload};
+use tauri::{Manager, State};
 
 mod commands;
+
 use commands::image_analysis::{analyze_image_metadata, recognize_faces, select_images_directory};
 
 #[tauri::command]

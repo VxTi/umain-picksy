@@ -42,3 +42,4 @@ rexif = "0.7"
 # collab
 dittolive-ditto = "=4.12.0"
 dotenvy = "0.15"
+base64 = "0.22.1"

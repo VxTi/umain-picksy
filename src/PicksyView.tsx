@@ -35,10 +35,10 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
           </p>
 
           <div className="grid grid-cols-3 gap-2 w-full">
-            {photos.map((photo) => (
+            {photos.map((photo, index) => (
               <img
-                key={photo.id}
-                src={convertFileSrc(photo.path)}
+                key={photo.id ?? index}
+                src={`data:image/jpeg;base64,${photo.base64}`}
                 alt={photo.filename}
                 className="h-20 w-full rounded object-cover"
                 loading="lazy"
