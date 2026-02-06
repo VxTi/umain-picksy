@@ -1,12 +1,11 @@
 import { listen } from "@tauri-apps/api/event";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { getLibraryPhotos } from "@/lib/library";
 import { openEditWindow } from "@/lib/windows";
-import { PencilIcon }               from 'lucide-react';
-import { useState, useEffect }                 from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Button }                   from "@/components/ui/button";
-import type { Photo }               from '@/backend/commandStream';
+import { PencilIcon, Trash2Icon } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { invoke } from "@tauri-apps/api/core";
+import type { Photo } from '@/backend/commandStream';
 
 export interface ImageItem {
 	id: string;
@@ -15,11 +14,8 @@ export interface ImageItem {
 }
 
 function Gallery() {
-	const navigate = useNavigate();
-	const location = useLocation();
 	const [photos, setPhotos] = useState<Photo[]>([]);
 	const [loading, setLoading] = useState(true);
-
 
 	// Listen for photos from the main window via events
 	useEffect(() => {
@@ -77,6 +73,22 @@ function Gallery() {
 		}
 	};
 
+	const handleDeleteClick = async () => {
+		if (selectedImages.length === 0) return;
+
+		try {
+			for (const image of selectedImages) {
+				await invoke("remove_image_from_album", { id: image.id });
+			}
+			// Update local state by removing the deleted photos
+			const deletedIds = new Set(selectedImages.map(img => img.id));
+			setPhotos(prev => prev.filter(p => !deletedIds.has(p.id)));
+			setSelectedImages([]);
+		} catch (error) {
+			console.error("Failed to delete images:", error);
+		}
+	};
+
 	const isSelected = (id: string) => selectedImages.some((img) => img.id === id);
 
 	return (
@@ -86,13 +98,25 @@ function Gallery() {
 					<p className="text-sm text-muted-foreground">
 						Select up to 2 images ({selectedImages.length}/2 selected)
 					</p>
-					<Button
-						onClick={handleEditClick}
-						disabled={selectedImages.length === 0}
-					>
-						<PencilIcon/>
-						Edit Selected
-					</Button>
+					<div className="flex gap-2">
+						{selectedImages.length > 0 && (
+							<Button
+								variant="destructive"
+								onClick={handleDeleteClick}
+								disabled={selectedImages.length === 0}
+							>
+								<Trash2Icon />
+								Delete Selected
+							</Button>
+						)}
+						<Button
+							onClick={handleEditClick}
+							disabled={selectedImages.length === 0}
+						>
+							<PencilIcon />
+							Edit Selected
+						</Button>
+					</div>
 				</div>
 
 				{loading ? (

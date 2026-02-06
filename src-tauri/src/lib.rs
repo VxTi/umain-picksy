@@ -6,7 +6,8 @@ use tauri::{Manager, State};
 mod commands;
 
 use commands::image_analysis::{
-    add_photo_to_library, analyze_image_metadata, recognize_faces, select_images_directory,
+    add_photo_to_library, analyze_image_metadata, recognize_faces, remove_image_from_album,
+    select_images_directory,
 };
 
 #[tauri::command]
@@ -41,6 +42,7 @@ pub fn run() {
             add_photo_to_library,
             analyze_image_metadata,
             recognize_faces,
+            remove_image_from_album,
             get_app_state,
             get_library_photos
         ])

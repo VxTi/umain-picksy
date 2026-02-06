@@ -185,6 +185,15 @@ fn image_to_base64(img: &DynamicImage, format: ImageFormat) -> String {
     format!("data:{};base64,{}", mime_type, res_base64)
 }
 
+#[tauri::command]
+pub async fn remove_image_from_album(
+    _app: AppHandle,
+    repo: State<'_, DittoRepository>,
+    id: String,
+) -> Result<(), String> {
+    repo.remove_photo(&id).await
+}
+
 fn process_image_file(path: String) -> Result<Photo, String> {
     let img = image::open(&path).map_err(|e| e.to_string())?;
     let id = generate_image_id(&img);
@@ -279,8 +288,7 @@ pub async fn add_photo_to_library(
         .add_filter(
             "Images",
             &[
-                "jpg", "jpeg", "png", "heic", "webp", "tiff", "JPG", "JPEG", "PNG", "HEIC", "WEBP",
-                "TIFF",
+                "jpg", "jpeg" , "png" , "heic" , "webp" , "tiff"
             ],
         )
         .pick_files(move |paths| {

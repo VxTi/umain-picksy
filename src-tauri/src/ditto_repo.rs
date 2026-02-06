@@ -231,6 +231,18 @@ impl DittoRepository {
             .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
         Ok(collect_photo_payloads(&result))
     }
+
+    pub async fn remove_photo(&self, id: &str) -> Result<(), String> {
+        let store = self.ditto.store();
+        store
+            .execute_v2((
+                format!("DELETE FROM {PHOTOS_COLLECTION} WHERE _id = :id"),
+                serde_json::json!({ "id": id }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to remove Ditto photo: {e}"))?;
+        Ok(())
+    }
 }
 
 impl AppState {
