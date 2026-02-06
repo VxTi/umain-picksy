@@ -4,9 +4,9 @@ import {
   type BackendCommand,
   type Photo
 } from '@/backend/commandStream';
-import { getLibraryPhotos }                                            from '@/lib/library';
-import { selectSourceFolder, analyzeImageMetadata, addPhotoToLibrary } from '@/lib/vision';
-import PicksyView                                                      from '../PicksyView';
+import { getLibraryPhotos } from '@/lib/library';
+import { selectSourceFolder, addPhotoToLibrary } from '@/lib/vision';
+import PicksyView from '../PicksyView';
 
 export default function Home() {
   const [ photos, setPhotos ] = useState<Photo[]>([]);
