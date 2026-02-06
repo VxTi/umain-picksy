@@ -1,3 +1,4 @@
+import { Photo }  from '@/backend/commandStream';
 import { invoke } from "@tauri-apps/api/core";
 
 /**
@@ -24,6 +25,7 @@ export interface FaceRecognitionResult {
  * @returns A promise that resolves to the image metadata.
  */
 export async function analyzeImageMetadata(path: string): Promise<ImageMetadata> {
+  console.log('Path:' , path)
   return await invoke<ImageMetadata>("analyze_image_metadata", { path });
 }
 
@@ -50,6 +52,6 @@ export async function recognizeFaces(
  * Opens a native dialog to select a source folder and returns a list of image file paths.
  * @returns A promise that resolves to a list of image paths or null if cancelled.
  */
-export async function selectSourceFolder(): Promise<string[] | null> {
-  return await invoke<string[] | null>("select_source_folder");
+export async function selectSourceFolder(): Promise<Photo[] | null> {
+  return await invoke<Photo[] | null>("select_images_directory");
 }

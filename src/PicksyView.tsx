@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useNavigate } from "react-router-dom";
 import type { Photo } from "./backend/commandStream";
 import { openGalleryWindow } from "@/lib/windows";
 
@@ -36,10 +37,10 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
           </p>
 
           <div className="grid grid-cols-3 gap-2 w-full">
-            {photos.map((photo) => (
+            {photos.map((photo, index) => (
               <img
-                key={photo.id}
-                src={convertFileSrc(photo.path)}
+                key={photo.id ?? index}
+                src={photo.base64}
                 alt={photo.filename}
                 className="h-20 w-full rounded object-cover"
                 loading="lazy"

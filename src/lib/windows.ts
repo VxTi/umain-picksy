@@ -30,10 +30,12 @@ export async function openGalleryWindow(photos?: Photo[]) {
   // Wait for window to be created, then send photos
   galleryWindow.once("tauri://created", async () => {
     console.log("Gallery window created");
-    if (photos) {
+    if (photos && photos.length > 0) {
+      // Longer delay to ensure React component has mounted and listener is ready
       setTimeout(() => {
+        console.log("Emitting gallery-photos with", photos.length, "photos");
         emit("gallery-photos", photos);
-      }, 100);
+      }, 500);
     }
   });
 

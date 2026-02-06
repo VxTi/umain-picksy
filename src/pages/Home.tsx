@@ -6,9 +6,6 @@ import {
 } from "../backend/commandStream";
 import { getLibraryPhotos } from "../lib/library";
 import { selectSourceFolder, analyzeImageMetadata } from '../lib/vision';
-import { Link } from "react-router-dom";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import PicksyView from "../PicksyView";
 
 function Home() {
@@ -47,8 +44,10 @@ function Home() {
   const handleSelectFolder = useCallback(async () => {
     try {
       const result = await selectSourceFolder();
+
+      console.log(result);
       if (result && result.length > 0) {
-        const metadata = await Promise.all(result.map(r => analyzeImageMetadata(r)));
+        const metadata = await Promise.all(result.map(r => analyzeImageMetadata(r.image_path)));
         console.log(metadata);
       }
     } catch (error) {

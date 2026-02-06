@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { listen } from "@tauri-apps/api/event";
-import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/button";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type { Photo } from "../backend/commandStream";
@@ -17,16 +16,29 @@ export interface ImageItem {
 function Gallery() {
 	const navigate = useNavigate();
 	const location = useLocation();
-	const [photos, setPhotos] = useState<Photo[]>(location.state?.photos || []);
+	const [photos, setPhotos] = useState<Photo[]>([]);
+	const [loading, setLoading] = useState(true);
+
 
 	// Listen for photos from the main window via events
 	useEffect(() => {
 		// Load photos from library on mount
-		getLibraryPhotos().then(setPhotos).catch(console.error);
+		getLibraryPhotos()
+			.then((loadedPhotos) => {
+				console.log("Gallery loaded photos from library:", loadedPhotos.length);
+				setPhotos(loadedPhotos);
+				setLoading(false);
+			})
+			.catch((err) => {
+				console.error("Failed to load photos:", err);
+				setLoading(false);
+			});
 
 		// Also listen for photos sent via event
 		const unlisten = listen<Photo[]>("gallery-photos", (event) => {
+			console.log("Gallery received photos via event:", event.payload.length);
 			setPhotos(event.payload);
+			setLoading(false);
 		});
 
 		return () => {
@@ -37,7 +49,7 @@ function Gallery() {
 	// Convert Photo[] to ImageItem[] for the gallery
 	const images: ImageItem[] = photos.map((photo) => ({
 		id: photo.id,
-		url: convertFileSrc(photo.path),
+		url: photo.base64,
 		title: photo.filename,
 	}));
 
@@ -68,7 +80,6 @@ function Gallery() {
 
 	return (
 		<main className="min-h-screen bg-background">
-
 			<div className="p-4">
 				<div className="flex items-center justify-between mb-4">
 					<p className="text-sm text-muted-foreground">
@@ -82,39 +93,43 @@ function Gallery() {
 					</Button>
 				</div>
 
-				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-					{images.map((image) => (
-						<div
-							key={image.id}
-							onClick={() => handleImageClick(image)}
-							className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-								isSelected(image.id)
-									? "border-primary ring-2 ring-primary ring-offset-2"
-									: "border-transparent hover:border-muted-foreground/50"
-							}`}
-						>
-							<img
-								src={image.url}
-								alt={image.title}
-								className="w-full h-48 object-cover"
-							/>
-							<div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-								<label className="text-white text-sm font-medium">
-									{image.title}
-								</label>
-							</div>
-							{isSelected(image.id) && (
-								<div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-									<span className="text-white text-xs font-bold">
-										{
-											selectedImages.findIndex((img) => img.id === image.id) + 1
-										}
-									</span>
+				{loading ? (
+					<p className="text-center text-muted-foreground">Loading photos...</p>
+				) : (
+					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+						{images.map((image) => (
+							<div
+								key={image.id}
+								onClick={() => handleImageClick(image)}
+								className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+									isSelected(image.id)
+										? "border-primary ring-2 ring-primary ring-offset-2"
+										: "border-transparent hover:border-muted-foreground/50"
+								}`}
+							>
+								<img
+									src={image.url}
+									alt={image.title}
+									className="w-full h-48 object-cover"
+								/>
+								<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
+									<p className="text-white text-sm font-medium">
+										{image.title}
+									</p>
 								</div>
-							)}
-						</div>
-					))}
-				</div>
+								{isSelected(image.id) && (
+									<div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+										<span className="text-white text-xs font-bold">
+											{
+												selectedImages.findIndex((img) => img.id === image.id) + 1
+											}
+										</span>
+									</div>
+								)}
+							</div>
+						))}
+					</div>
+				)}
 			</div>
 		</main>
 	);

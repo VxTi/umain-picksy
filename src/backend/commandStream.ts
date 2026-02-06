@@ -1,10 +1,20 @@
 import { listen, type Event } from "@tauri-apps/api/event";
 
-export type Photo = {
+export interface PhotoMetadata {
+   datetime?: string;
+   latitude?: number;
+   longitude?: number
+   make?: string,
+   model?: string,
+}
+
+export interface Photo {
+  base64: string;
+  image_path: string;
+  metadata?: PhotoMetadata;
   id: string;
   filename: string;
-  path: string;
-};
+}
 
 export type BackendCommand = {
   command: "SetLibrary";
