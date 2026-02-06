@@ -4,9 +4,10 @@ import type { Photo } from "./backend/commandStream";
 
 type PicksyViewProps = {
   photos: Photo[];
+  onSelectFolder: () => void;
 };
 
-export default function PicksyView({ photos }: PicksyViewProps) {
+export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-[420px] shadow-xl">
@@ -19,7 +20,7 @@ export default function PicksyView({ photos }: PicksyViewProps) {
 
           {/* Buttons */}
           <div className="flex flex-col gap-3 w-full">
-            <Button size="lg" className="w-full">
+            <Button size="lg" className="w-full" onClick={onSelectFolder}>
               Select folder
             </Button>
 

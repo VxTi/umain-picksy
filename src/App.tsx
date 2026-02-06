@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import PicksyView from "./PicksyView";
 import {
@@ -6,6 +6,7 @@ import {
   type BackendCommand,
   type Photo,
 } from "./backend/commandStream";
+import { selectSourceFolder } from "./lib/vision";
 
 function App() {
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -32,9 +33,17 @@ function App() {
     };
   }, []);
 
+  const handleSelectFolder = useCallback(async () => {
+    try {
+      await selectSourceFolder();
+    } catch (error) {
+      console.error("Failed to select source folder", error);
+    }
+  }, []);
+
   return (
     <main className="container">
-      <PicksyView photos={photos} />
+      <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
     </main>
   );
 }
