@@ -24,7 +24,7 @@ const GetPhotosFromLibraryArgsSchema = EmptySchema;
 const GetPhotosFromLibraryResultSchema = Schema.Array(PhotoSchema);
 
 const RemovePhotoFromLibraryArgsSchema = Schema.Struct({
-	photoId: Schema.String,
+	id: Schema.String,
 });
 
 const SetPhotoFavoriteArgsSchema = Schema.Struct({
@@ -36,7 +36,7 @@ export const enum CommandType {
 	ADD_PHOTOS_FROM_FOLDER = "add_photos_from_folder",
 	CLEAR_LIBRARY = "clear_library",
 	ADD_PHOTOS_TO_LIBRARY = "add_photos_to_library",
-	REMOVE_PHOTO_FROM_LIBRARY = "remove_photo_from_library",
+	REMOVE_PHOTO_FROM_LIBRARY = "remove_image_from_album",
 	GET_PHOTOS_FROM_LIBRARY = "get_photos_from_library",
 	SAVE_PHOTO_CONFIG = "save_photo_config",
 	SET_PHOTO_FAVORITE = "set_photo_favorite",
