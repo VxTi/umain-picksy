@@ -73,6 +73,8 @@ struct PhotoDocument {
     base64: String,
     #[serde(default)]
     content_commit_id: Option<u64>,
+    #[serde(default)]
+    author_peer_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -82,6 +84,7 @@ pub struct PhotoPayload {
     pub path: String,
     pub base64: String,
     pub sync_status: SyncStatus,
+    pub author_peer_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -159,6 +162,7 @@ impl DittoRepository {
             .presence()
             .set_peer_metadata(&peer_metadata)
             .map_err(|e| format!("Failed to set peer metadata: {e}"))?;
+        // in ditto 4.13 also write the DEVICE_NAME back to system (ALTER SYSTEM SET DEVICE_NAME = 'YourCustomDeviceName')
 
         ditto
             .presence()
@@ -245,6 +249,13 @@ impl DittoRepository {
 
     pub async fn upsert_photos_from_paths(&self, images: &[Photo]) -> Result<(), String> {
         let store = self.ditto.store();
+        let author_peer_id = self
+            .ditto
+            .presence()
+            .graph()
+            .local_peer
+            .peer_key_string
+            .clone();
         let mut seen = std::collections::HashSet::new();
 
         for image in images {
@@ -265,6 +276,7 @@ impl DittoRepository {
                 path: image.image_path.clone(),
                 base64: image.base64.clone(),
                 content_commit_id: None,
+                author_peer_id: Some(author_peer_id.clone()),
             };
 
             let result = store
@@ -550,6 +562,7 @@ fn collect_photo_payloads(query_result: &QueryResult, sync_info: &SyncInfo) -> V
                 path: doc.path,
                 base64: doc.base64,
                 sync_status,
+                author_peer_id: doc.author_peer_id,
             }
         })
         .collect()
