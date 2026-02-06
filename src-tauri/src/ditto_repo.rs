@@ -1,5 +1,8 @@
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
+use std::time::Instant;
+
+use tokio::sync::mpsc;
 
 use dittolive_ditto::dql::QueryResult;
 use dittolive_ditto::fs::PersistentRoot;
@@ -76,6 +79,8 @@ struct SyncScopesArgs {
 struct SyncScopes {
     #[serde(rename = "photos")]
     photos: String,
+    #[serde(rename = "app_state")]
+    app_state: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -108,6 +113,7 @@ struct PresencePayload {
 pub struct DittoRepository {
     state: Arc<RwLock<AppState>>,
     ditto: Arc<Ditto>,
+    upsert_tx: mpsc::UnboundedSender<Vec<Photo>>,
     _observer: Arc<StoreObserver>,
     _photos_observer: Arc<StoreObserver>,
     _presence_observer: PresenceObserver,
@@ -194,6 +200,7 @@ impl DittoRepository {
         let sync_scopes = SyncScopesArgs {
             sync_scopes: SyncScopes {
                 photos: "SmallPeersOnly".to_string(),
+                app_state: "SmallPeersOnly".to_string(),
             },
         };
         ditto
@@ -213,8 +220,23 @@ impl DittoRepository {
 
         let initial_state = load_state(ditto.as_ref()).await?;
         let state = Arc::new(RwLock::new(initial_state));
+        let (upsert_tx, mut upsert_rx) = mpsc::unbounded_channel::<Vec<Photo>>();
+        let ditto_for_worker = ditto.clone();
+        let app_handle = app.clone();
+        tauri::async_runtime::spawn(async move {
+            while let Some(images) = upsert_rx.recv().await {
+                if let Err(error) = upsert_photos_from_paths_with_ditto(ditto_for_worker.as_ref(), &images).await {
+                    eprintln!("{error}");
+                    continue;
+                }
+                if let Err(error) = emit_library_snapshot(ditto_for_worker.as_ref(), &app_handle).await {
+                    eprintln!("{error}");
+                }
+            }
+        });
+
         let observer = install_state_observer(ditto.as_ref(), state.clone())?;
-        let photos_observer = install_photos_observer(ditto.as_ref(), app)?;
+        let photos_observer = install_photos_observer(ditto.clone(), app)?;
         let presence_observer = install_presence_observer(ditto.clone(), app)?;
         emit_library_snapshot(ditto.as_ref(), app).await?;
         emit_presence_snapshot(ditto.as_ref(), app)?;
@@ -222,6 +244,7 @@ impl DittoRepository {
         Ok(Self {
             state,
             ditto,
+            upsert_tx,
             _observer: observer,
             _photos_observer: photos_observer,
             _presence_observer: presence_observer,
@@ -250,56 +273,13 @@ impl DittoRepository {
     }
 
     pub async fn upsert_photos_from_paths(&self, images: &[Photo]) -> Result<(), String> {
-        let store = self.ditto.store();
-        let author_peer_id = self
-            .ditto
-            .presence()
-            .graph()
-            .local_peer
-            .peer_key_string
-            .clone();
-        let mut seen = std::collections::HashSet::new();
+        upsert_photos_from_paths_with_ditto(self.ditto.as_ref(), images).await
+    }
 
-        let mut docs = Vec::new();
-
-        for image in images {
-            let filename = std::path::Path::new(&image.image_path)
-                .file_name()
-                .map(|name| name.to_string_lossy().to_string())
-                .unwrap_or_else(|| image.image_path.clone());
-
-            let doc_id = image.id.clone();
-
-            if !seen.insert(doc_id.clone()) {
-                continue;
-            }
-
-            let doc = PhotoDocument {
-                _id: doc_id.clone(),
-                filename: filename.clone(),
-                image_path: image.image_path.clone(),
-                base64: image.base64.clone(),
-                author_peer_id: Some(author_peer_id.clone()),
-            };
-
-            docs.push(doc);
-        }
-
-        if docs.is_empty() {
-            return Ok(());
-        }
-
-        store
-            .execute_v2((
-                format!(
-                    "INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:docs) ON ID CONFLICT DO UPDATE"
-                ),
-                serde_json::json!({ "docs": docs }),
-            ))
-            .await
-            .map_err(|e| format!("Failed to upsert Ditto photos: {e}"))?;
-
-        Ok(())
+    pub async fn enqueue_upsert_photos_from_paths(&self, images: Vec<Photo>) -> Result<(), String> {
+        self.upsert_tx
+            .send(images)
+            .map_err(|_| "Failed to queue photo upsert".to_string())
     }
 
     pub async fn get_photos(&self) -> Result<Vec<PhotoPayload>, String> {
@@ -463,18 +443,24 @@ fn normalize_state(mut state: AppState) -> AppState {
     state
 }
 
-fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreObserver>, String> {
+fn install_photos_observer(ditto: Arc<Ditto>, app: &AppHandle) -> Result<Arc<StoreObserver>, String> {
     let store = ditto.store();
     let app_handle = app.clone();
+    let ditto_for_task = ditto.clone();
+    let (tx, mut rx) = mpsc::unbounded_channel::<()>();
+    tauri::async_runtime::spawn(async move {
+        while rx.recv().await.is_some() {
+            if let Err(error) = emit_library_snapshot(ditto_for_task.as_ref(), &app_handle).await {
+                eprintln!("{error}");
+            }
+        }
+    });
     let query = format!("SELECT * FROM {PHOTOS_COLLECTION}");
     store
         .register_observer_v2(query, move |query_result| {
-            println!("<=== Emitting SetLibrary");
-            let photos = collect_photo_payloads(&query_result);
-            let payload: SetLibraryPayload = SetLibraryPayload { photos };
-            if let Err(error) = app_handle.emit(SET_LIBRARY_EVENT, payload) {
-                eprintln!("{error}");
-            }
+            println!("<=== Emitting SetLibrary from observer");
+            let _ = query_result;
+            let _ = tx.send(());
         })
         .map_err(|e| format!("Failed to register photo observer: {e}"))
 }
@@ -488,9 +474,12 @@ fn install_presence_observer(
         .presence()
         .register_observer(move |graph| {
             let payload = build_presence_payload(graph);
-            if let Err(error) = app_handle.emit(PRESENCE_EVENT, payload) {
-                eprintln!("{error}");
-            }
+            let app_handle = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(error) = app_handle.emit(PRESENCE_EVENT, payload) {
+                    eprintln!("{error}");
+                }
+            });
         })
         .map_err(|e| format!("Failed to register presence observer: {e}"))
 }
@@ -501,12 +490,123 @@ async fn emit_library_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), Str
         .execute_v2(format!("SELECT * FROM {PHOTOS_COLLECTION}"))
         .await
         .map_err(|e| format!("Failed to query Ditto photos: {e}"))?;
+    println!("<=== Emitting SetLibrary: {:?}", result.iter().count());
     let payload = SetLibraryPayload {
         photos: collect_photo_payloads(&result),
     };
-    println!("<=== Emitting SetLibrary");
     app.emit(SET_LIBRARY_EVENT, payload)
         .map_err(|e| format!("Failed to emit SetLibrary: {e}"))
+}
+
+async fn upsert_photos_from_paths_with_ditto(
+    ditto: &Ditto,
+    images: &[Photo],
+) -> Result<(), String> {
+    let store = ditto.store();
+    let author_peer_id = ditto
+        .presence()
+        .graph()
+        .local_peer
+        .peer_key_string
+        .clone();
+    println!("Upsert: author_peer_id: {}", author_peer_id);
+    let mut seen = std::collections::HashSet::new();
+
+    let mut docs = Vec::new();
+
+    for image in images {
+        let filename = std::path::Path::new(&image.image_path)
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| image.image_path.clone());
+
+        let doc_id = image.id.clone();
+
+        if !seen.insert(doc_id.clone()) {
+            continue;
+        }
+
+        let doc = PhotoDocument {
+            _id: doc_id.clone(),
+            filename: filename.clone(),
+            image_path: image.image_path.clone(),
+            base64: image.base64.clone(),
+            author_peer_id: Some(author_peer_id.clone()),
+        };
+
+        docs.push(doc);
+    }
+
+    if docs.is_empty() {
+        return Ok(());
+    }
+
+    let docs_len = docs.len();
+    let (total_base64_bytes, max_base64_bytes, max_base64_path) = docs.iter().fold(
+        (0usize, 0usize, String::new()),
+        |(total, max, max_path), doc| {
+            let len = doc.base64.len();
+            if len > max {
+                (total + len, len, doc.image_path.clone())
+            } else {
+                (total + len, max, max_path)
+            }
+        },
+    );
+    println!(
+        "Upsert: docs: {}, total_base64_bytes: {}, max_base64_bytes: {} ({})",
+        docs_len,
+        total_base64_bytes,
+        max_base64_bytes,
+        max_base64_path
+    );
+
+    let start = Instant::now();
+    let insert_query = format!(
+        "INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:doc) ON ID CONFLICT DO UPDATE"
+    );
+    let timeout_after = std::time::Duration::from_secs(60);
+    let mut ticker = tokio::time::interval(std::time::Duration::from_secs(5));
+    let store_for_task = store.clone();
+    let docs_for_task = docs;
+    let mut join = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
+        tauri::async_runtime::block_on(async move {
+            for doc in docs_for_task {
+                store_for_task
+                    .execute_v2((
+                        insert_query.clone(),
+                        serde_json::json!({ "doc": doc }),
+                    ))
+                    .await
+                    .map_err(|e| format!("Failed to upsert Ditto photos: {e}"))?;
+            }
+            Ok(())
+        })
+    });
+
+    loop {
+        tokio::select! {
+            result = &mut join => {
+                let query_result = result.map_err(|e| format!("Upsert task failed: {e}"))?;
+                query_result.map_err(|e| format!("Failed to upsert Ditto photos: {e}"))?;
+                break;
+            }
+            _ = ticker.tick() => {
+                let elapsed = start.elapsed();
+                println!("Upsert: still running... {:?}", elapsed);
+                if elapsed >= timeout_after {
+                    return Err(format!(
+                        "Upsert timed out after {:?} ({} docs)",
+                        elapsed,
+                        docs_len
+                    ));
+                }
+            }
+        }
+    }
+
+    println!("Upsert: done in {:?}", start.elapsed());
+    Ok(())
 }
 
 fn emit_presence_snapshot(ditto: &Ditto, app: &AppHandle) -> Result<(), String> {
@@ -552,5 +652,3 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
         })
         .collect()
 }
-
-
