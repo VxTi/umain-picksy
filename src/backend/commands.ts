@@ -1,17 +1,30 @@
-import { InvokeArgs } from "@tauri-apps/api/core";
+import { Schema } from "effect";
 
-type SingleCommandConf<Args extends InvokeArgs, Result> = {
-  args: Args;
-  result: Result;
+/** Ensures every command has both args and result schemas. */
+type CommandEntry = {
+  args: Schema.Schema<any, any, any>;
+  result: Schema.Schema<any, any, any>;
 };
 
-type Photo = {
-  id: string;
-};
-type CommandConf = {
-  list_photos: SingleCommandConf<{}, { photos: Photo[] }>;
-};
+const PhotoSchema = Schema.Struct({ id: Schema.String });
+const ListPhotosArgsSchema = Schema.Struct({});
+const ListPhotosResultSchema = Schema.Struct({
+  photos: Schema.Array(PhotoSchema),
+});
 
-export type Command = keyof CommandConf;
-export type Args<C extends Command> = CommandConf[C]["args"];
-export type Result<C extends Command> = CommandConf[C]["result"];
+export const CommandSchemas = {
+  list_photos: {
+    args: ListPhotosArgsSchema,
+    result: ListPhotosResultSchema,
+  },
+} as const satisfies Record<string, CommandEntry>;
+
+export type Command = keyof typeof CommandSchemas;
+export type Args<C extends Command> = (typeof CommandSchemas)[C]["args"] extends
+  Schema.Schema<infer A, any, any>
+  ? A
+  : never;
+export type Result<C extends Command> =
+  (typeof CommandSchemas)[C]["result"] extends Schema.Schema<infer A, any, any>
+    ? A
+    : never;
