@@ -381,10 +381,10 @@ export default function Gallery() {
 								<XIcon className="h-5 w-5" />
 							</button>
 						</div>
-						<img
+						<PhotoComponent
 							src={fullScreenPhoto.base64}
 							alt={fullScreenPhoto.filename}
-							className="max-h-full max-w-full object-contain"
+							config={fullScreenPhoto.config ?? {}}
 						/>
 					</div>
 				</div>
