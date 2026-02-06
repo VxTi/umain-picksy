@@ -85,7 +85,7 @@ impl DittoRepository {
     pub async fn init(app: &AppHandle) -> Result<Self, String> {
         load_dotenv(app)?;
 
-        let (app_id, playground_token, auth_url) = read_ditto_env()?;
+        let (app_id, playground_token, auth_url, websocket_url) = read_ditto_env()?;
         let data_dir = app
             .path()
             .app_data_dir()
@@ -113,6 +113,7 @@ impl DittoRepository {
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
 
         ditto.update_transport_config(|transport_config| {
+            transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
             transport_config.peer_to_peer.bluetooth_le.enabled = false;
             //Local Area Network
@@ -248,7 +249,9 @@ fn read_ditto_env() -> Result<(String, String, String), String> {
         .map_err(|_| "Missing DITTO_PLAYGROUND_TOKEN (or DITTO_SHARED_TOKEN)".to_string())?;
     let auth_url = std::env::var("DITTO_AUTH_URL")
         .map_err(|_| "Missing DITTO_AUTH_URL".to_string())?;
-    Ok((app_id, playground_token, auth_url))
+    let websocket_url = std::env::var("DITTO_WEBSOCKET_URL")
+        .map_err(|_| "Missing DITTO_WEBSOCKET_URL".to_string())?;
+    Ok((app_id, playground_token, auth_url, websocket_url))
 }
 
 async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
