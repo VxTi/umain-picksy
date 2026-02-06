@@ -51,5 +51,5 @@ export async function recognizeFaces(
  * @returns A promise that resolves to a list of image paths or null if cancelled.
  */
 export async function selectSourceFolder(): Promise<string[] | null> {
-  return await invoke<string[] | null>("select_source_folder");
+  return await invoke<string[] | null>("select_images_directory");
 }
