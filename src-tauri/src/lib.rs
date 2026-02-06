@@ -14,6 +14,7 @@ use commands::photo_library_commands::{
     remove_image_from_album,
     add_photos_from_folder,
     save_photo_config,
+    set_photo_favorite,
 };
 
 #[tauri::command]
@@ -47,7 +48,8 @@ pub fn run() {
             remove_image_from_album,
             get_app_state,
             get_photos_from_library,
-            save_photo_config
+            save_photo_config,
+            set_photo_favorite
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

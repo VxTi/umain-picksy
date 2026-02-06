@@ -5,9 +5,9 @@ import { SyncStatus } from "@/lib/synchronization";
 import { PhotoComponent } from "@/pages/PhotoComponent";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
-import { PencilIcon, Trash2Icon } from "lucide-react";
+import { PencilIcon, StarIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, MouseEvent, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
@@ -253,10 +253,12 @@ function AlbumPhoto({
 	selectedImages: Readonly<Photo[]>;
 	setSelectedImages: Dispatch<SetStateAction<Readonly<Photo[]>>>;
 }) {
+	const { setPhotoFavorite } = usePhotoLibrary();
 	const isSelected = useMemo(
 		() => selectedImages.some((img) => img.id === image.id),
 		[image, selectedImages],
 	);
+	const isFavorite = image.favorite ?? false;
 
 	const handleImageClick = useCallback(
 		(image: Photo) => {
@@ -276,7 +278,16 @@ function AlbumPhoto({
 		[setSelectedImages],
 	);
 
-	const syncStatus = (image as { sync_status?: SyncStatus }).sync_status;
+	const handleFavoriteClick = useCallback(
+		(event: MouseEvent<HTMLButtonElement>) => {
+			event.preventDefault();
+			event.stopPropagation();
+			void setPhotoFavorite(image.id, !isFavorite).catch(() =>
+				toast.error("Failed to update favorite."),
+			);
+		},
+		[image.id, isFavorite, setPhotoFavorite],
+	);
 
 	return (
 		<button
@@ -295,25 +306,26 @@ function AlbumPhoto({
 				alt={image.filename}
 				config={image.config ?? {}}
 			/>
-			<div
-				className={twMerge(
-					`absolute top-2 left-2 rounded-full px-2 py-1 text-xs font-medium`,
-					syncStatus === SyncStatus.SYNCED
-						? "bg-green-500"
-						: syncStatus === SyncStatus.PENDING
-							? "bg-yellow-500"
-							: syncStatus === SyncStatus.DISCONNECTED
-								? "bg-red-500"
-								: "bg-gray-500",
-				)}
-			>
-				{getSyncStatusLabel(syncStatus)}
-			</div>
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
 			</div>
+			<button
+				type="button"
+				onClick={handleFavoriteClick}
+				aria-pressed={isFavorite}
+				aria-label={isFavorite ? "Remove favorite" : "Mark favorite"}
+				className={twMerge(
+					"absolute top-2 right-2 rounded-full p-1.5 transition-colors",
+					isFavorite ? "bg-yellow-400/90 text-black" : "bg-black/50 text-white",
+				)}
+			>
+				<StarIcon
+					className="h-4 w-4"
+					fill={isFavorite ? "currentColor" : "none"}
+				/>
+			</button>
 			{isSelected && (
-				<div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+				<div className="absolute top-2 right-10 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
 					<span className="text-white text-xs font-bold">
 						{selectedImages.findIndex((img) => img.id === image.id) + 1}
 					</span>

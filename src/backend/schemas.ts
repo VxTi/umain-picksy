@@ -14,6 +14,7 @@ export const PhotoSchema = Schema.Struct({
 	sync_status: Schema.optional(Schema.NullOr(Schema.String)),
 	author_peer_id: Schema.optional(Schema.NullOr(Schema.String)),
 	config: Schema.optional(Schema.NullOr(PhotoConfig)),
+	favorite: Schema.optional(Schema.Boolean),
 });
 
 export type PhotoConfig = Schema.Schema.Type<typeof PhotoConfig>;

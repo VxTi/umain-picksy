@@ -210,6 +210,7 @@ fn process_image_file(path: String) -> Result<Photo, String> {
         image_path: path,
         base64: base64_content,
         config: None,
+        favorite: false,
     })
 }
 
@@ -265,8 +266,9 @@ pub async fn add_photos_from_folder(
                             pending.push(photo);
                             processed_count += 1;
                             if pending.len() >= UPSERT_BATCH_SIZE {
-                                repo.upsert_photos_from_paths(&pending).await?;
-                                pending.clear();
+                                let batch = std::mem::take(&mut pending);
+                                println!("Import: queueing batch of {} photos", batch.len());
+                                repo.enqueue_upsert_photos_from_paths(batch).await?;
                             }
                         }
                     }
@@ -274,18 +276,12 @@ pub async fn add_photos_from_folder(
             }
         }
 
+        println!("Import: upserting final batch of {} photos", pending.len());
         if !pending.is_empty() {
-            let batch_start = Instant::now();
-            repo.upsert_photos_from_paths(&pending).await?;
-            println!(
-                "Import: upserted final batch of {} photos ({} total processed) in {:?}",
-                pending.len(),
-                processed_count,
-                batch_start.elapsed()
-            );
+            let batch = std::mem::take(&mut pending);
+            println!("Import: queueing final batch of {} photos", batch.len());
+            repo.enqueue_upsert_photos_from_paths(batch).await?;
         }
-
-        repo.emit_library_snapshot(&app).await?;
 
         println!(
             "Import: finished dispatch for {} photos in {:?}",
@@ -325,7 +321,6 @@ pub async fn add_photos_to_library(
 
     if let Some(file_paths) = files {
         let mut photos = Vec::new();
-        let mut current_state = repo.get_state();
         let mut pending: Vec<Photo> = Vec::new();
 
         for file_path in file_paths {
@@ -342,11 +337,10 @@ pub async fn add_photos_to_library(
             if let Ok(photo) = process_image_file(path_str) {
                 let photo_clone = photo.clone();
                 photos.push(photo_clone.clone());
-                current_state.images.push(photo_clone.clone());
                 pending.push(photo_clone);
                 if pending.len() >= UPSERT_BATCH_SIZE {
-                    repo.upsert_photos_from_paths(&pending).await?;
-                    pending.clear();
+                    let batch = std::mem::take(&mut pending);
+                    repo.enqueue_upsert_photos_from_paths(batch).await?;
                 }
             }
         }
@@ -356,14 +350,9 @@ pub async fn add_photos_to_library(
         }
 
         if !pending.is_empty() {
-            repo.upsert_photos_from_paths(&pending).await?;
+            let batch = std::mem::take(&mut pending);
+            repo.enqueue_upsert_photos_from_paths(batch).await?;
         }
-
-        repo.dispatch(AppAction::SetImageLibraryContent {
-            images: current_state.images,
-        })
-        .await?;
-        repo.emit_library_snapshot(&app).await?;
 
         Ok(Some(photos))
     } else {
@@ -390,4 +379,13 @@ pub async fn save_photo_config(
     config: crate::ditto_repo::PhotoConfig,
 ) -> Result<(), String> {
     repo.update_photo_config(&id, config).await
+}
+
+#[tauri::command]
+pub async fn set_photo_favorite(
+    repo: State<'_, DittoRepository>,
+    id: String,
+    favorite: bool,
+) -> Result<(), String> {
+    repo.update_photo_favorite(&id, favorite).await
 }

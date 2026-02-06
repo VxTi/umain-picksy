@@ -27,6 +27,11 @@ const RemovePhotoFromLibraryArgsSchema = Schema.Struct({
 	photoId: Schema.String,
 });
 
+const SetPhotoFavoriteArgsSchema = Schema.Struct({
+	id: Schema.String,
+	favorite: Schema.Boolean,
+});
+
 export const enum CommandType {
 	ADD_PHOTOS_FROM_FOLDER = "add_photos_from_folder",
 	CLEAR_LIBRARY = "clear_library",
@@ -34,6 +39,7 @@ export const enum CommandType {
 	REMOVE_PHOTO_FROM_LIBRARY = "remove_photo_from_library",
 	GET_PHOTOS_FROM_LIBRARY = "get_photos_from_library",
 	SAVE_PHOTO_CONFIG = "save_photo_config",
+	SET_PHOTO_FAVORITE = "set_photo_favorite",
 }
 
 export const CommandSchemas = {
@@ -60,6 +66,10 @@ export const CommandSchemas = {
 	},
 	[CommandType.SAVE_PHOTO_CONFIG]: {
 		args: SavePhotoConfigArgsSchema,
+		result: EmptySchema,
+	},
+	[CommandType.SET_PHOTO_FAVORITE]: {
+		args: SetPhotoFavoriteArgsSchema,
 		result: EmptySchema,
 	},
 } as const satisfies Record<string, CommandEntry>;
