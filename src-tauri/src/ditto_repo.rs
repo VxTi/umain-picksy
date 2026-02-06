@@ -55,6 +55,7 @@ struct PhotoDocument {
     _id: String,
     filename: String,
     path: String,
+    base64: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -62,6 +63,7 @@ pub struct PhotoPayload {
     pub id: String,
     pub filename: String,
     pub path: String,
+    pub base64: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -164,6 +166,7 @@ impl DittoRepository {
                 _id: filename.clone(),
                 filename: filename.clone(),
                 path: image.image_path.clone(),
+                base64: image.base64.clone(),
             };
 
             store
@@ -330,6 +333,7 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
             id: doc._id,
             filename: doc.filename,
             path: doc.path,
+            base64: doc.base64,
         })
         .collect()
 }
