@@ -67,7 +67,7 @@ export function PhotoLibraryProvider({
 		(photo: Photo) =>
 			Effect.sync(() => setLoading(true)).pipe(
 				Effect.zipRight(
-					invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { photoId: photo.id }),
+					invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { id: photo.id }),
 				),
 				Effect.ensuring(Effect.sync(() => setLoading(false))),
 			),

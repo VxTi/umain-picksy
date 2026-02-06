@@ -240,9 +240,24 @@ function GalleryNavigationBar({
 	const handleDeleteClick = async () => {
 		if (selectedImages.length === 0) return;
 
-		await Promise.allSettled(
+		const results = await Promise.allSettled(
 			selectedImages.map((img) => removePhotoFromLibrary(img)),
-		).catch(() => toast.error("Failed to delete images."));
+		);
+		const failed = results.filter((result) => result.status === "rejected");
+		if (failed.length > 0) {
+			console.error(failed);
+			toast.error(
+				`Failed to delete ${failed.length} ${
+					failed.length === 1 ? "image" : "images"
+				}.`,
+			);
+		} else {
+			toast.success(
+				`Deleted ${selectedImages.length} ${
+					selectedImages.length === 1 ? "image" : "images"
+				}.`,
+			);
+		}
 	};
 
 	const onlineCount = presence?.remote_peers.length ?? 0;
@@ -359,19 +374,6 @@ function FilterUsers({
 			))}
 		</select>
 	);
-}
-
-function getSyncStatusLabel(status: string | undefined) {
-	switch (status) {
-		case SyncStatus.SYNCED:
-			return "Synced";
-		case SyncStatus.PENDING:
-			return "Syncing";
-		case SyncStatus.DISCONNECTED:
-			return "Offline";
-		default:
-			return "Unknown";
-	}
 }
 
 function AlbumPhoto({
