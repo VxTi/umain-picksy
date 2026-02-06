@@ -40,5 +40,5 @@ objc2-image-io = "0.3.2"
 # For simple EXIF parsing fallback
 rexif = "0.7"
 # collab
-dittolive-ditto = "=4.14.1"
+dittolive-ditto = "=4.13.1"
 dotenvy = "0.15"
