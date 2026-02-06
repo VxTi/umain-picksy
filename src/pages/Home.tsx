@@ -1,45 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
+import { usePhotos } from "@/backend/hooks";
+import { useCallback } from "react";
+
 import {
-  listenToBackendCommands,
-  type BackendCommand,
-  type Photo
-} from '@/backend/commandStream';
-import { getLibraryPhotos } from '@/lib/library';
-import { selectSourceFolder, addPhotoToLibrary } from '@/lib/vision';
-import PicksyView from '../PicksyView';
+  selectSourceFolder,
+  addPhotoToLibrary,
+  analyzeImageMetadata,
+} from "@/lib/vision";
+import { clearLibrary } from "@/lib/library";
+import PicksyView from "../PicksyView";
 
 export default function Home() {
-  const [ photos, setPhotos ] = useState<Photo[]>([]);
-
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    listenToBackendCommands((command: BackendCommand) => {
-      if (command.command === 'SetLibrary') {
-        setPhotos(command.photos);
-      }
-    })
-      .then((stop) => {
-        unlisten = stop;
-      })
-      .catch((error) => {
-        console.error('Failed to listen for backend commands', error);
-      });
-
-    getLibraryPhotos()
-      .then((initialPhotos) => {
-        setPhotos(initialPhotos);
-      })
-      .catch((error) => {
-        console.error('Failed to fetch library photos', error);
-      });
-
-    return () => {
-      if (unlisten) {
-        unlisten();
-      }
-    };
-  }, []);
+  const photos = usePhotos();
 
   const handleAddPhoto = useCallback(async () => {
     await addPhotoToLibrary();
@@ -47,9 +18,25 @@ export default function Home() {
 
   const handleSelectFolder = useCallback(async () => {
     try {
-      await selectSourceFolder();
+      const result = await selectSourceFolder();
+
+      console.log(result);
+      if (result && result.length > 0) {
+        const metadata = await Promise.all(
+          result.map((r) => analyzeImageMetadata(r.image_path)),
+        );
+        console.log(metadata);
+      }
     } catch (error) {
-      console.error('Failed to select source folder', error);
+      console.error("Failed to select source folder", error);
+    }
+  }, []);
+
+  const handleClearLibrary = useCallback(async () => {
+    try {
+      await clearLibrary();
+    } catch (error) {
+      console.error("Failed to clear library", error);
     }
   }, []);
 
@@ -59,6 +46,7 @@ export default function Home() {
         photos={photos}
         onSelectFolder={handleSelectFolder}
         onAddPhoto={handleAddPhoto}
+        onClearLibrary={handleClearLibrary}
       />
     </main>
   );

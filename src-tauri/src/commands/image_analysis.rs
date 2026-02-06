@@ -334,3 +334,8 @@ pub async fn add_photo_to_library(
         Ok(None)
     }
 }
+
+#[tauri::command]
+pub async fn clear_library(repo: State<'_, DittoRepository>) -> Result<(), String> {
+    repo.clear_library().await
+}

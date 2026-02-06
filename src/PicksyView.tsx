@@ -1,19 +1,21 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FolderIcon, ImagePlusIcon, ImagesIcon } from 'lucide-react';
-import { DispatchWithoutAction } from 'react';
-import type { Photo } from "./backend/commandStream";
+import { FolderIcon, ImagePlusIcon, ImagesIcon } from "lucide-react";
+import { SetLibraryResult } from "./backend/events";
 import { openGalleryWindow } from "@/lib/windows";
 
-interface PicksyViewProps {
-  photos: Photo[];
-  onSelectFolder: DispatchWithoutAction
-  onAddPhoto: DispatchWithoutAction
+type PicksyViewProps = {
+  photos: SetLibraryResult["photos"];
+  onSelectFolder: () => void;
+  onAddPhoto: () => void;
+  onClearLibrary: () => void;
 };
 
 export default function PicksyView({
   photos,
   onSelectFolder,
+  onAddPhoto,
+  onClearLibrary,
 }: PicksyViewProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -30,12 +32,12 @@ export default function PicksyView({
 
           <div className="flex flex-col gap-2 w-full">
 
-            <Button size="lg" className="w-full" onClick={onSelectFolder}>
-              <ImagePlusIcon/> Add photo
+            <Button size="lg" className="w-full" onClick={onAddPhoto}>
+              <ImagePlusIcon /> Add photo
             </Button>
 
             <Button size="lg" className="w-full" onClick={onSelectFolder}>
-              <FolderIcon/> Select photo folder
+              <FolderIcon /> Select photo folder
             </Button>
 
             <Button
@@ -44,8 +46,17 @@ export default function PicksyView({
               className="w-full"
               onClick={() => openGalleryWindow(photos)}
             >
-              <ImagesIcon/>
+              <ImagesIcon />
               View Gallery
+            </Button>
+
+            <Button
+              size="lg"
+              variant="destructive"
+              className="w-full"
+              onClick={onClearLibrary}
+            >
+              Clear library
             </Button>
           </div>
 
