@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { useNavigate } from "react-router-dom";
 import type { Photo } from "./backend/commandStream";
 
 type PicksyViewProps = {
@@ -9,6 +10,8 @@ type PicksyViewProps = {
 };
 
 export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-[420px] shadow-xl">
@@ -25,8 +28,8 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
               Select folder
             </Button>
 
-            <Button size="lg" variant="outline" className="w-full">
-              Call the developer directly
+            <Button size="lg" variant="outline" className="w-full" onClick={() => navigate("/gallery")}>
+              View Gallery
             </Button>
           </div>
 
