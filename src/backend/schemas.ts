@@ -20,7 +20,6 @@ export const PhotoSchema = Schema.Struct({
 	image_path: Schema.String,
 	filename: Schema.String,
 	metadata: Schema.optional(MetadataSchema),
-	sync_status: Schema.String,
 	author_peer_id: Schema.optional(Schema.String),
 });
 

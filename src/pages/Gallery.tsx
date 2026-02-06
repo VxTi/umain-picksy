@@ -11,7 +11,6 @@ export interface ImageItem {
 	id: string;
 	url: string;
 	title: string;
-	syncStatus: Photo["sync_status"];
 }
 
 interface PresencePeer {
@@ -89,11 +88,11 @@ function Gallery() {
 		id: photo.id,
 		url: photo.base64,
 		title: photo.filename,
-		syncStatus: photo.sync_status ?? "unknown",
 	}));
 
 	const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: reset selection on filter change
 	useEffect(() => {
 		setSelectedImages([]);
 	}, [authorFilter]);
@@ -137,18 +136,6 @@ function Gallery() {
 
 	const isSelected = (id: string) =>
 		selectedImages.some((img) => img.id === id);
-	const getSyncBadge = (status: Photo["sync_status"]) => {
-		switch (status) {
-			case "synced":
-				return { label: "Synced", className: "bg-emerald-500/90 text-white" };
-			case "pending":
-				return { label: "Syncing", className: "bg-amber-500/90 text-black" };
-			case "disconnected":
-				return { label: "Offline", className: "bg-red-500/90 text-white" };
-			default:
-				return { label: "Unknown", className: "bg-gray-500/90 text-white" };
-		}
-	};
 
 	const onlineCount = presence?.remote_peers.length ?? 0;
 	const onlineLabel = onlineCount > 0 ? `${onlineCount} online` : "Offline";
@@ -184,16 +171,15 @@ function Gallery() {
 								</option>
 							))}
 						</select>
-						<div
-							onMouseEnter={() => setShowPeers(true)}
-							onMouseLeave={() => {
-								if (!pinnedPeers) {
-									setShowPeers(false);
-								}
-							}}
-						>
+						<div>
 							<Button
 								variant="outline"
+								onMouseEnter={() => setShowPeers(true)}
+								onMouseLeave={() => {
+									if (!pinnedPeers) {
+										setShowPeers(false);
+									}
+								}}
 								onClick={() => {
 									setPinnedPeers((prev) => {
 										const next = !prev;
@@ -272,9 +258,9 @@ function Gallery() {
 				) : (
 					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 						{images.map((image) => {
-							const badge = getSyncBadge(image.syncStatus);
 							return (
-								<div
+								<button
+									type="button"
 									key={image.id}
 									onClick={() => handleImageClick(image)}
 									className={`relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 ${
@@ -288,11 +274,6 @@ function Gallery() {
 										alt={image.title}
 										className="w-full h-48 object-cover"
 									/>
-									<div
-										className={`absolute top-2 left-2 rounded-full px-2 py-1 text-xs font-medium ${badge.className}`}
-									>
-										{badge.label}
-									</div>
 									<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 										<p className="text-white text-sm font-medium">
 											{image.title}
@@ -307,7 +288,7 @@ function Gallery() {
 											</span>
 										</div>
 									)}
-								</div>
+								</button>
 							);
 						})}
 					</div>
