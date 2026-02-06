@@ -5272,6 +5272,7 @@ name = "umain-picksy"
 version = "0.1.0"
 dependencies = [
  "dittolive-ditto",
+ "dotenvy",
  "image",
  "objc2 0.5.2",
  "objc2-core-graphics",

@@ -41,3 +41,4 @@ objc2-image-io = "0.3.2"
 rexif = "0.7"
 # collab
 dittolive-ditto = "=4.14.1"
+dotenvy = "0.15"
