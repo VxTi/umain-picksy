@@ -140,30 +140,31 @@ function Gallery() {
 					<p className="text-sm text-muted-foreground">
 						Select up to 2 images ({selectedImages.length}/2 selected)
 					</p>
-					<div
-						className="relative flex items-center gap-2"
-						onMouseEnter={() => setShowPeers(true)}
-						onMouseLeave={() => {
-							if (!pinnedPeers) {
-								setShowPeers(false);
-							}
-						}}
-					>
-						<Button
-							variant="outline"
-							onClick={() => {
-								setPinnedPeers((prev) => {
-									const next = !prev;
-									setShowPeers(next);
-									return next;
-								});
+					<div className="relative flex items-center gap-2">
+						<div
+							onMouseEnter={() => setShowPeers(true)}
+							onMouseLeave={() => {
+								if (!pinnedPeers) {
+									setShowPeers(false);
+								}
 							}}
 						>
-							<span
-								className={`inline-block h-2 w-2 rounded-full ${onlineDotClass}`}
-							/>
-							{onlineLabel}
-						</Button>
+							<Button
+								variant="outline"
+								onClick={() => {
+									setPinnedPeers((prev) => {
+										const next = !prev;
+										setShowPeers(next);
+										return next;
+									});
+								}}
+							>
+								<span
+									className={`inline-block h-2 w-2 rounded-full ${onlineDotClass}`}
+								/>
+								{onlineLabel}
+							</Button>
+						</div>
 						{selectedImages.length > 0 && (
 							<Button
 								variant="destructive"
