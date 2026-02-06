@@ -1,7 +1,14 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import type { Photo } from "./backend/commandStream";
 
-export default function PicksyView() {
+type PicksyViewProps = {
+  photos: Photo[];
+  onSelectFolder: () => void;
+};
+
+export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Card className="w-[420px] shadow-xl">
@@ -14,7 +21,7 @@ export default function PicksyView() {
 
           {/* Buttons */}
           <div className="flex flex-col gap-3 w-full">
-            <Button size="lg" className="w-full">
+            <Button size="lg" className="w-full" onClick={onSelectFolder}>
               Select folder
             </Button>
 
@@ -23,8 +30,24 @@ export default function PicksyView() {
             </Button>
           </div>
 
+          <p className="text-xs text-muted-foreground">
+            {photos.length} photos in library
+          </p>
+
+          <div className="grid grid-cols-3 gap-2 w-full">
+            {photos.map((photo) => (
+              <img
+                key={photo.id}
+                src={convertFileSrc(photo.path)}
+                alt={photo.filename}
+                className="h-20 w-full rounded object-cover"
+                loading="lazy"
+              />
+            ))}
+          </div>
+
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
