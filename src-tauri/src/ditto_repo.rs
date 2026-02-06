@@ -26,6 +26,7 @@ pub struct ImageMetadata {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Photo {
+    #[serde(default)]
     pub id: String,
     pub image_path: String,
     pub base64: String,
@@ -112,7 +113,29 @@ impl DittoRepository {
             .disable_sync_with_v3()
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
 
+        ditto
+            .presence()
+            .set_connection_request_handler(|connection_request: ConnectionRequest| {
+                let connection_type = connection_request.connection_type();
+                let peer_key = connection_request.peer_key_string();
+                let peer_metadata = connection_request.peer_metadata_json_str();
+                let identity_metadata = connection_request.identity_service_metadata_json_str();
+
+                println!(
+                    "Connection request: type={connection_type:?}, peer_key={peer_key}, peer_metadata={peer_metadata}, identity_metadata={identity_metadata}"
+                );
+
+                ConnectionRequestAuthorization::Allow
+                // if (true) {
+                // } else {
+                //     ConnectionRequestAuthorization::Deny
+                // }
+            });
+
         ditto.update_transport_config(|transport_config| {
+            transport_config.enable_all_peer_to_peer();
+            transport_config.global.sync_group = 0; // all users in 1 big pool!
+            transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
             transport_config.peer_to_peer.bluetooth_le.enabled = false;
@@ -127,6 +150,8 @@ impl DittoRepository {
         ditto
             .start_sync()
             .map_err(|e| format!("Failed to start Ditto sync: {e}"))?;
+    
+        ditto.sync().register_subscription_v2("SELECT * FROM photos").map_err(|e| format!("Failed to register subscription: {e}"))?;
 
         let initial_state = load_state(&ditto).await?;
         let state = Arc::new(RwLock::new(initial_state));
@@ -276,7 +301,7 @@ async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
             return Ok(AppState::default());
         }
     };
-    Ok(stored.state)
+    Ok(normalize_state(stored.state))
 }
 
 async fn persist_state(ditto: &Ditto, state: &AppState) -> Result<(), String> {
@@ -314,11 +339,20 @@ fn install_state_observer(
             let stored: Result<StoredState, _> = item.deserialize_value();
             if let Ok(stored) = stored {
                 if let Ok(mut guard) = state.write() {
-                    *guard = stored.state;
+                    *guard = normalize_state(stored.state);
                 }
             }
         })
         .map_err(|e| format!("Failed to register Ditto observer: {e}"))
+}
+
+fn normalize_state(mut state: AppState) -> AppState {
+    for photo in &mut state.images {
+        if photo.id.is_empty() {
+            photo.id = photo.image_path.clone();
+        }
+    }
+    state
 }
 
 fn install_photos_observer(ditto: &Ditto, app: &AppHandle) -> Result<Arc<StoreObserver>, String> {
