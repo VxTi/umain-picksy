@@ -15,6 +15,9 @@ use commands::photo_library_commands::{
     add_photos_from_folder,
     save_photo_config,
     set_photo_favorite,
+    set_photo_stack,
+    set_stack_primary,
+    clear_photo_stack,
 };
 
 #[tauri::command]
@@ -49,7 +52,10 @@ pub fn run() {
             get_app_state,
             get_photos_from_library,
             save_photo_config,
-            set_photo_favorite
+            set_photo_favorite,
+            set_photo_stack,
+            set_stack_primary,
+            clear_photo_stack
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
