@@ -1,11 +1,12 @@
+import { usePhotoLibrary } from "@/backend/photo-library-context";
+import { EventType } from "@/lib/events";
 import { listen } from "@tauri-apps/api/event";
-import { invoke } from "@tauri-apps/api/core";
-import { getLibraryPhotos } from "@/lib/library";
 import { openEditWindow } from "@/lib/windows";
 import { PencilIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { Photo } from "@/backend/commandStream";
+import { toast } from "sonner";
 
 export interface ImageItem {
 	id: string;
@@ -26,31 +27,16 @@ interface PresencePayload {
 }
 
 function Gallery() {
-	const [photos, setPhotos] = useState<Photo[]>([]);
-	const [loading, setLoading] = useState(true);
+	const { photos, removePhotoFromLibrary, setPhotos, loading } =
+		usePhotoLibrary();
+
 	const [presence, setPresence] = useState<PresencePayload | null>(null);
 	const [showPeers, setShowPeers] = useState(false);
 	const [pinnedPeers, setPinnedPeers] = useState(false);
 
-	// Listen for photos from the main window via events
 	useEffect(() => {
-		// Load photos from library on mount
-		getLibraryPhotos()
-			.then((loadedPhotos) => {
-				console.log("Gallery loaded photos from library:", loadedPhotos.length);
-				setPhotos(loadedPhotos);
-				setLoading(false);
-			})
-			.catch((err) => {
-				console.error("Failed to load photos:", err);
-				setLoading(false);
-			});
-
-		// Also listen for photos sent via event
-		const unlisten = listen<Photo[]>("gallery-photos", (event) => {
-			console.log("Gallery received photos via event:", event.payload.length);
+		const unlisten = listen<Photo[]>(EventType.TRANSPORT_IMAGES, (event) => {
 			setPhotos(event.payload);
-			setLoading(false);
 		});
 
 		const unlistenPresence = listen<PresencePayload>("Presence", (event) => {
@@ -63,17 +49,9 @@ function Gallery() {
 		};
 	}, []);
 
-	// Convert Photo[] to ImageItem[] for the gallery
-	const images: ImageItem[] = photos.map((photo) => ({
-		id: photo.id,
-		url: photo.base64,
-		title: photo.filename,
-		syncStatus: photo.sync_status ?? "unknown",
-	}));
+	const [selectedImages, setSelectedImages] = useState<Readonly<Photo[]>>([]);
 
-	const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
-
-	const handleImageClick = (image: ImageItem) => {
+	const handleImageClick = (image: Photo) => {
 		setSelectedImages((prev) => {
 			const isSelected = prev.some((img) => img.id === image.id);
 			if (isSelected) {
@@ -90,24 +68,16 @@ function Gallery() {
 
 	const handleEditClick = () => {
 		if (selectedImages.length > 0) {
-			openEditWindow(selectedImages);
+			void openEditWindow(selectedImages);
 		}
 	};
 
 	const handleDeleteClick = async () => {
 		if (selectedImages.length === 0) return;
 
-		try {
-			for (const image of selectedImages) {
-				await invoke("remove_image_from_album", { id: image.id });
-			}
-			// Update local state by removing the deleted photos
-			const deletedIds = new Set(selectedImages.map((img) => img.id));
-			setPhotos((prev) => prev.filter((p) => !deletedIds.has(p.id)));
-			setSelectedImages([]);
-		} catch (error) {
-			console.error("Failed to delete images:", error);
-		}
+		await Promise.allSettled(
+			selectedImages.map((img) => removePhotoFromLibrary(img)),
+		).catch(() => toast.error("Failed to delete images."));
 	};
 
 	const isSelected = (id: string) =>
@@ -228,8 +198,8 @@ function Gallery() {
 					<p className="text-center text-muted-foreground">Loading photos...</p>
 				) : (
 					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-						{images.map((image) => {
-							const badge = getSyncBadge(image.syncStatus);
+						{photos.map((image) => {
+							const badge = getSyncBadge(image.sync_status);
 							return (
 								<div
 									key={image.id}
@@ -241,8 +211,8 @@ function Gallery() {
 									}`}
 								>
 									<img
-										src={image.url}
-										alt={image.title}
+										src={image.base64}
+										alt={image.filename}
 										className="w-full h-48 object-cover"
 									/>
 									<div
@@ -252,7 +222,7 @@ function Gallery() {
 									</div>
 									<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 										<p className="text-white text-sm font-medium">
-											{image.title}
+											{image.filename}
 										</p>
 									</div>
 									{isSelected(image.id) && (

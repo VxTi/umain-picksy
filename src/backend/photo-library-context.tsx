@@ -5,10 +5,14 @@ import { listen } from "@/backend/listen";
 import { Photo } from "@/backend/schemas";
 import { useCallbackEffect, useEffectEffect } from "@/effect-react";
 import { Effect } from "effect";
-import React from "react";
+import React, { Dispatch, SetStateAction } from "react";
 
 export interface PhotoLibraryContextType {
 	photos: Readonly<Photo[]>;
+	setPhotos: Dispatch<SetStateAction<Readonly<Photo[]>>>;
+
+	loading: boolean;
+
 	addPhotosFromFolder: () => Promise<Readonly<Photo[]>>;
 	removePhotoFromLibrary: (photo: Photo) => Promise<{}>;
 	clearLibrary: () => Promise<{}>;
@@ -36,6 +40,7 @@ export function PhotoLibraryProvider({
 	children: React.ReactNode;
 }) {
 	const [photos, setPhotos] = React.useState<SetLibraryResult["photos"]>([]);
+	const [loading, setLoading] = React.useState<boolean>(false);
 
 	const addPhotosToLibrary = useCallbackEffect(
 		() => invoke(CommandType.ADD_PHOTOS_TO_LIBRARY, {}),
@@ -68,11 +73,13 @@ export function PhotoLibraryProvider({
 				),
 			);
 
+			setLoading(true);
 			yield* invoke(CommandType.GET_PHOTOS_FROM_LIBRARY, {}).pipe(
 				Effect.tap((photos) => setPhotos(photos)),
 				Effect.catchAllCause((cause) =>
 					Effect.logError("Failed to get library photos", cause),
 				),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
 			);
 		}),
 		[],
@@ -82,6 +89,8 @@ export function PhotoLibraryProvider({
 		<PhotoLibraryContext.Provider
 			value={{
 				photos,
+				setPhotos,
+				loading,
 				addPhotosToLibrary,
 				removePhotoFromLibrary,
 				addPhotosFromFolder,

@@ -1,3 +1,4 @@
+import { EventType } from "@/lib/events";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -13,7 +14,7 @@ export async function openGalleryWindow(photos?: SetLibraryResult["photos"]) {
 	if (existing) {
 		await existing.setFocus();
 		if (photos) {
-			await emit("gallery-photos", photos);
+			await emit(EventType.TRANSPORT_IMAGES, photos);
 		}
 		return existing;
 	}
@@ -35,8 +36,7 @@ export async function openGalleryWindow(photos?: SetLibraryResult["photos"]) {
 		if (photos && photos.length > 0) {
 			// Longer delay to ensure React component has mounted and listener is ready
 			setTimeout(() => {
-				console.log("Emitting gallery-photos with", photos.length, "photos");
-				emit("gallery-photos", photos);
+				emit(EventType.TRANSPORT_IMAGES, photos);
 			}, 500);
 		}
 	});
