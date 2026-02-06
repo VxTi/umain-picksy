@@ -33,11 +33,13 @@ export function useEffectEffect<A, E>(
 	}, deps);
 }
 
-export function useCallbackEffect<A, E>(
-	effectFactory: () => Effect.Effect<A, E>,
+type CallbackFn<TArgs extends any[], TRet> = (...args: TArgs) => Promise<TRet>;
+
+export function useCallbackEffect<A, E, Args extends any[]>(
+	effectFactory: (...args: Args) => Effect.Effect<A, E>,
 	deps: React.DependencyList,
-) {
-	return useCallback(() => {
-		return Runtime.runPromise(runtime)(effectFactory());
+): CallbackFn<Args, A> {
+	return useCallback((...args: Args) => {
+		return Runtime.runPromise(runtime)(effectFactory(...args));
 	}, deps);
 }

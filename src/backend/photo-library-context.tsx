@@ -5,13 +5,17 @@ import { listen } from "@/backend/listen";
 import { Photo } from "@/backend/schemas";
 import { useCallbackEffect, useEffectEffect } from "@/effect-react";
 import { Effect } from "effect";
-import React from "react";
+import React, { Dispatch, SetStateAction } from "react";
 
 export interface PhotoLibraryContextType {
 	photos: Readonly<Photo[]>;
+	setPhotos: Dispatch<SetStateAction<Readonly<Photo[]>>>;
+
+	loading: boolean;
+
 	addPhotosFromFolder: () => Promise<Readonly<Photo[]>>;
-	removePhotoFromLibrary: (photo: Photo) => void;
-	clearLibrary: () => void;
+	removePhotoFromLibrary: (photo: Photo) => Promise<{}>;
+	clearLibrary: () => Promise<{}>;
 	addPhotosToLibrary: () => Promise<Readonly<Photo[]>>;
 }
 
@@ -36,22 +40,43 @@ export function PhotoLibraryProvider({
 	children: React.ReactNode;
 }) {
 	const [photos, setPhotos] = React.useState<SetLibraryResult["photos"]>([]);
+	const [loading, setLoading] = React.useState<boolean>(true);
 
 	const addPhotosToLibrary = useCallbackEffect(
-		() => invoke(CommandType.ADD_PHOTOS_TO_LIBRARY, {}),
+		() =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(invoke(CommandType.ADD_PHOTOS_TO_LIBRARY, {})),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
 		[],
 	);
 
-	const removePhotoFromLibrary = (photo: Photo) =>
-		invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { photoId: photo.id });
+	const removePhotoFromLibrary = useCallbackEffect(
+		(photo: Photo) =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(
+					invoke(CommandType.REMOVE_PHOTO_FROM_LIBRARY, { photoId: photo.id }),
+				),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
+		[],
+	);
 
 	const addPhotosFromFolder = useCallbackEffect(
-		() => invoke(CommandType.ADD_PHOTOS_FROM_FOLDER, {}),
+		() =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(invoke(CommandType.ADD_PHOTOS_FROM_FOLDER, {})),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
 		[],
 	);
 
 	const clearLibrary = useCallbackEffect(
-		() => invoke(CommandType.CLEAR_LIBRARY, {}),
+		() =>
+			Effect.sync(() => setLoading(true)).pipe(
+				Effect.zipRight(invoke(CommandType.CLEAR_LIBRARY, {})),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
+			),
 		[],
 	);
 
@@ -64,11 +89,14 @@ export function PhotoLibraryProvider({
 					Effect.logError("Failed to listen for SetLibrary", cause),
 				),
 			);
+
+			setLoading(true);
 			yield* invoke(CommandType.GET_PHOTOS_FROM_LIBRARY, {}).pipe(
 				Effect.tap((photos) => setPhotos(photos)),
 				Effect.catchAllCause((cause) =>
 					Effect.logError("Failed to get library photos", cause),
 				),
+				Effect.ensuring(Effect.sync(() => setLoading(false))),
 			);
 		}),
 		[],
@@ -78,6 +106,8 @@ export function PhotoLibraryProvider({
 		<PhotoLibraryContext.Provider
 			value={{
 				photos,
+				setPhotos,
+				loading,
 				addPhotosToLibrary,
 				removePhotoFromLibrary,
 				addPhotosFromFolder,

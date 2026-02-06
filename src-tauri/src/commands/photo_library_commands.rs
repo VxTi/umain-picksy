@@ -1,4 +1,4 @@
-use crate::ditto_repo::{AppAction, DittoRepository, Photo};
+use crate::ditto_repo::{AppAction, DittoRepository, Photo, PhotoPayload};
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
 use rexif::{ExifTag, TagValue};
@@ -211,7 +211,7 @@ fn process_image_file(path: String) -> Result<Photo, String> {
 }
 
 #[tauri::command]
-pub async fn select_images_directory(
+pub async fn add_photos_from_folder(
     app: AppHandle,
     repo: State<'_, DittoRepository>,
 ) -> Result<Option<Vec<Photo>>, String> {
@@ -298,7 +298,7 @@ pub async fn select_images_directory(
 }
 
 #[tauri::command]
-pub async fn add_photo_to_library(
+pub async fn add_photos_to_library(
     app: AppHandle,
     repo: State<'_, DittoRepository>,
 ) -> Result<Option<Vec<Photo>>, String> {
@@ -371,4 +371,9 @@ pub async fn add_photo_to_library(
 #[tauri::command]
 pub async fn clear_library(repo: State<'_, DittoRepository>) -> Result<(), String> {
     repo.clear_library().await
+}
+
+#[tauri::command]
+pub async fn get_photos_from_library(repo: State<'_, DittoRepository>) -> Result<Vec<PhotoPayload>, String> {
+    repo.get_photos().await
 }

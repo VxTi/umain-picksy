@@ -1,51 +1,17 @@
-import { usePhotos } from "@/backend/hooks";
-import { useCallback } from "react";
-
-import {
-	selectSourceFolder,
-	addPhotosToLibrary,
-	analyzeImageMetadata,
-} from "@/lib/vision";
-import { clearLibrary } from "@/lib/library";
+import { usePhotoLibrary } from "@/backend/photo-library-context";
 import PicksyView from "../PicksyView";
-import { useCallbackEffect } from "@/effect-react";
 
 export default function Home() {
-	const photos = usePhotos();
-
-	const handleAddPhoto = useCallbackEffect(() => addPhotosToLibrary(), []);
-
-	const handleSelectFolder = useCallback(async () => {
-		try {
-			const result = await selectSourceFolder();
-
-			console.log(result);
-			if (result && result.length > 0) {
-				const metadata = await Promise.all(
-					result.map((r) => analyzeImageMetadata(r.image_path)),
-				);
-				console.log(metadata);
-			}
-		} catch (error) {
-			console.error("Failed to select source folder", error);
-		}
-	}, []);
-
-	const handleClearLibrary = useCallback(async () => {
-		try {
-			await clearLibrary();
-		} catch (error) {
-			console.error("Failed to clear library", error);
-		}
-	}, []);
+	const { addPhotosToLibrary, addPhotosFromFolder, clearLibrary, photos } =
+		usePhotoLibrary();
 
 	return (
 		<main className="container bg-gray-100 min-h-screen">
 			<PicksyView
 				photos={photos}
-				onSelectFolder={handleSelectFolder}
-				onAddPhoto={handleAddPhoto}
-				onClearLibrary={handleClearLibrary}
+				onSelectFolder={addPhotosFromFolder}
+				onAddPhoto={addPhotosToLibrary}
+				onClearLibrary={clearLibrary}
 			/>
 		</main>
 	);

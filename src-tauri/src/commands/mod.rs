@@ -1,1 +1,1 @@
-pub mod image_analysis;
+pub mod photo_library_commands;
