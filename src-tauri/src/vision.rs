@@ -1,4 +1,5 @@
 use serde::Serialize;
+use rexif::{ExifTag, TagValue};
 
 #[derive(Debug, Serialize)]
 pub struct ImageMetadata {
@@ -9,13 +10,18 @@ pub struct ImageMetadata {
     pub model: Option<String>,
 }
 
+
 #[tauri::command]
 pub async fn analyze_image_metadata(path: String) -> Result<ImageMetadata, String> {
-    // Fallback EXIF parsing using the `rexif` crate for portability.
-    // If parsing fails (e.g., PNG without EXIF), return empty metadata instead of an error.
     let data = match rexif::parse_file(&path) {
-        Ok(d) => Some(d),
-        Err(_e) => None,
+        Ok(d) => d,
+        Err(_) => return Ok(ImageMetadata {
+            datetime: None,
+            latitude: None,
+            longitude: None,
+            make: None,
+            model: None,
+        }),
     };
 
     let mut out = ImageMetadata {
@@ -26,57 +32,44 @@ pub async fn analyze_image_metadata(path: String) -> Result<ImageMetadata, Strin
         model: None,
     };
 
-    let Some(data) = data else {
-        return Ok(out);
-    };
-
-    let mut out = ImageMetadata {
-        datetime: None,
-        latitude: None,
-        longitude: None,
-        make: None,
-        model: None,
-    };
-
-    // Helper to get string value by tag name
-    let get_str = |tag_name: &str| -> Option<String> {
-        data.entries
-            .iter()
-            .find(|e| e.tag.to_string() == tag_name)
-            .map(|e| e.value_more_readable.to_string())
-    };
-
-    out.datetime = get_str("DateTimeOriginal").or_else(|| get_str("DateTime"));
-    out.make = get_str("Make");
-    out.model = get_str("Model");
-
-    // GPS coordinates
-    let lat_str = get_str("GPSLatitude");
-    let lat_ref = get_str("GPSLatitudeRef");
-    let lon_str = get_str("GPSLongitude");
-    let lon_ref = get_str("GPSLongitudeRef");
-
-    let parse_first_float = |s: &str| -> Option<f64> {
-        let token = s
-            .split(|c: char| !(c.is_ascii_digit() || c == '.' || c == '-' ))
-            .find(|t| !t.is_empty())?;
-        token.parse::<f64>().ok()
-    };
-
-    if let (Some(lat_s), Some(lat_ref_s)) = (lat_str.as_ref(), lat_ref.as_ref()) {
-        if let Some(v) = parse_first_float(lat_s) {
-            let sign = if lat_ref_s.trim().eq_ignore_ascii_case("S") { -1.0 } else { 1.0 };
-            out.latitude = Some(v * sign);
-        }
-    }
-    if let (Some(lon_s), Some(lon_ref_s)) = (lon_str.as_ref(), lon_ref.as_ref()) {
-        if let Some(v) = parse_first_float(lon_s) {
-            let sign = if lon_ref_s.trim().eq_ignore_ascii_case("W") { -1.0 } else { 1.0 };
-            out.longitude = Some(v * sign);
+    for entry in &data.entries {
+        match entry.tag {
+            ExifTag::DateTimeOriginal | ExifTag::DateTime => {
+                if out.datetime.is_none() {
+                    out.datetime = Some(entry.value_more_readable.to_string());
+                }
+            }
+            ExifTag::Make => out.make = Some(entry.value_more_readable.to_string()),
+            ExifTag::Model => out.model = Some(entry.value_more_readable.to_string()),
+            ExifTag::GPSLatitude => out.latitude = parse_gps_to_decimal(&entry.value),
+            ExifTag::GPSLongitude => out.longitude = parse_gps_to_decimal(&entry.value),
+            ExifTag::GPSLatitudeRef => {
+                if entry.value_more_readable.contains('S') {
+                    out.latitude = out.latitude.map(|lat| -lat.abs());
+                }
+            }
+            ExifTag::GPSLongitudeRef => {
+                if entry.value_more_readable.contains('W') {
+                    out.longitude = out.longitude.map(|lon| -lon.abs());
+                }
+            }
+            _ => {}
         }
     }
 
     Ok(out)
+}
+
+fn parse_gps_to_decimal(value: &TagValue) -> Option<f64> {
+    if let TagValue::URational(values) = value {
+        if values.len() >= 3 {
+            let deg = values[0].value();
+            let min = values[1].value();
+            let sec = values[2].value();
+            return Some(deg + (min / 60.0) + (sec / 3600.0));
+        }
+    }
+    None
 }
 
 #[derive(Debug, Serialize)]

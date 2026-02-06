@@ -6,6 +6,9 @@
     "main"
   ],
   "permissions": [
+    "fs:read-files",
+    "fs:scope-home",
+    "fs:allow-exists",
     "core:default",
     "opener:default",
     "dialog:default",

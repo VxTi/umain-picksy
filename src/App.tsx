@@ -1,21 +1,15 @@
-import { useState } from "react";
 import reactLogo from "./assets/react.svg";
 import { analyzeImageMetadata, selectSourceFolder } from './lib/vision';
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-
   async function test() {
     // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
     const result = await selectSourceFolder();
     if (result && result.length > 0) {
-      console.log(result);
       // Example: analyze metadata of the first image
-      const metadata = await analyzeImageMetadata(result[0]);
-      setGreetMsg(`Selected ${result.length} images. First taken at: ${metadata.datetime ?? 'unknown time'}`);
-    } else if (result) {
-      setGreetMsg("Selected 0 images");
+      const metadata = await Promise.all(result.map(r => analyzeImageMetadata(r)));
+      console.log(metadata);
     }
   }
 
@@ -45,7 +39,6 @@ function App() {
       >
         <button type="submit">Select Library</button>
       </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
