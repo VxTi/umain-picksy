@@ -41,21 +41,33 @@ function PhotoEditor() {
 	};
 
 	const onBrightnessChange = (brightness: number) => {
-		const photo = editingPhotos[activeImageIndex];
-		if (!photo) return;
-		void saveImageConfig(photo.id, { brightness });
+		setEditingPhotos((prev) =>
+			prev.map((photo, i) =>
+				i === activeImageIndex
+					? { ...photo, config: { ...photo.config, brightness } }
+					: photo,
+			),
+		);
 	};
 
 	const onSaturationChange = (saturation: number) => {
-		const photo = editingPhotos[activeImageIndex];
-		if (!photo) return;
-		void saveImageConfig(photo.id, { saturation });
+		setEditingPhotos((prev) =>
+			prev.map((photo, i) =>
+				i === activeImageIndex
+					? { ...photo, config: { ...photo.config, saturation } }
+					: photo,
+			),
+		);
 	};
 
 	const onBlurChange = (blur: number) => {
-		const photo = editingPhotos[activeImageIndex];
-		if (!photo) return;
-		void saveImageConfig(photo.id, { blur });
+		setEditingPhotos((prev) =>
+			prev.map((photo, i) =>
+				i === activeImageIndex
+					? { ...photo, config: { ...photo.config, blur } }
+					: photo,
+			),
+		);
 	};
 
 	const hasEditablePhotos = editingPhotos.length > 0;
@@ -73,8 +85,9 @@ function PhotoEditor() {
 					<div className="flex gap-2">
 						{editingPhotos.length > 1 && (
 							<div className="flex bg-muted rounded-lg p-1">
-								{editingPhotos.map((_, i) => (
+								{editingPhotos.map((photo, i) => (
 									<Button
+										key={photo.id}
 										variant={activeImageIndex === i ? "default" : "ghost"}
 										size="sm"
 										onClick={() => setActiveImageIndex(i)}
@@ -104,6 +117,7 @@ function PhotoEditor() {
 				<div className="flex-1 flex justify-center items-center  p-4 gap-4 overflow-hidden flex-wrap *:basis-50">
 					{editingPhotos.map((photo, i) => (
 						<div
+							key={photo.id}
 							className={twMerge(
 								"flex-1 h-full flex flex-col items-center justify-center transition-all duration-300",
 								editingPhotos.length > 1 && activeImageIndex === i
