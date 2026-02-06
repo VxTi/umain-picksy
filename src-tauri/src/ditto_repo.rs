@@ -159,6 +159,7 @@ impl DittoRepository {
             .presence()
             .set_peer_metadata(&peer_metadata)
             .map_err(|e| format!("Failed to set peer metadata: {e}"))?;
+        // in ditto 4.13 also write the DEVICE_NAME back to system (ALTER SYSTEM SET DEVICE_NAME = 'YourCustomDeviceName')
 
         ditto
             .presence()
