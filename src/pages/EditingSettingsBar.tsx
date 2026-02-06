@@ -1,5 +1,5 @@
 import { Slider } from "@/components/ui/slider";
-import { Card, CardContent }               from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { BlendIcon, DropletIcon, SunIcon } from 'lucide-react';
 
 type Props = {
@@ -78,7 +78,7 @@ export default function EditingSettingsBar({
               value={[blur]}
               onValueChange={(v) => onBlurChange(v[0])}
               min={0}
-              max={20}
+              max={10}
               step={1}
             />
           </div>
