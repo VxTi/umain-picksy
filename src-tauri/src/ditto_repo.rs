@@ -8,7 +8,7 @@ use dittolive_ditto::prelude::*;
 use dittolive_ditto::store::StoreObserver;
 use serde::{Deserialize, Serialize};
 use tauri::path::BaseDirectory;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 const STATE_COLLECTION: &str = "app_state";
 const STATE_DOC_ID: &str = "root";
@@ -337,7 +337,7 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
 }
 
 fn emit_backend_command(app: &AppHandle, command: BackendCommand) -> Result<(), String> {
-    app.emit_all(BACKEND_COMMAND_EVENT, command)
+    app.emit(BACKEND_COMMAND_EVENT, command)
         .map_err(|e| format!("Failed to emit backend command: {e}"))
 }
 
