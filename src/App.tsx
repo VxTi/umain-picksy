@@ -1,59 +1,18 @@
-import { useCallback, useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
-import PicksyView from "./PicksyView";
-import {
-  listenToBackendCommands,
-  type BackendCommand,
-  type Photo,
-} from "./backend/commandStream";
-import { getLibraryPhotos } from "./lib/library";
-import { selectSourceFolder } from "./lib/vision";
+import Home from "./pages/Home";
+import Gallery from "./pages/Gallery";
+import Edit from "./pages/Edit";
 
 function App() {
-  const [photos, setPhotos] = useState<Photo[]>([]);
-
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-
-    listenToBackendCommands((command: BackendCommand) => {
-      if (command.command === "SetLibrary") {
-        setPhotos(command.photos);
-      }
-    })
-      .then((stop) => {
-        unlisten = stop;
-      })
-      .catch((error) => {
-        console.error("Failed to listen for backend commands", error);
-      });
-
-    getLibraryPhotos()
-      .then((initialPhotos) => {
-        setPhotos(initialPhotos);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch library photos", error);
-      });
-
-    return () => {
-      if (unlisten) {
-        unlisten();
-      }
-    };
-  }, []);
-
-  const handleSelectFolder = useCallback(async () => {
-    try {
-      await selectSourceFolder();
-    } catch (error) {
-      console.error("Failed to select source folder", error);
-    }
-  }, []);
-
   return (
-    <main className="container">
-      <PicksyView photos={photos} onSelectFolder={handleSelectFolder} />
-    </main>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/gallery" element={<Gallery />} />
+        <Route path="/edit" element={<Edit />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
