@@ -40,7 +40,7 @@ impl DittoRepository {
     pub async fn init(app: &AppHandle) -> Result<Self, String> {
         load_dotenv(app)?;
 
-        let (app_id, playground_token) = read_ditto_env()?;
+        let (app_id, playground_token, auth_url) = read_ditto_env()?;
         let data_dir = app
             .path()
             .app_data_dir()
@@ -56,7 +56,7 @@ impl DittoRepository {
                     AppId::from_str(&app_id)?,
                     playground_token.clone(),
                     true,
-                    None,
+                    Some(&auth_url),
                 )
             })
             .map_err(|e| format!("Failed to configure Ditto identity: {e}"))?
@@ -137,14 +137,16 @@ fn load_dotenv(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-fn read_ditto_env() -> Result<(String, String), String> {
+fn read_ditto_env() -> Result<(String, String, String), String> {
     let app_id = std::env::var("DITTO_APP_ID")
         .or_else(|_| std::env::var("DITTO_DATABASE_ID"))
         .map_err(|_| "Missing DITTO_APP_ID (or DITTO_DATABASE_ID)".to_string())?;
     let playground_token = std::env::var("DITTO_PLAYGROUND_TOKEN")
         .or_else(|_| std::env::var("DITTO_SHARED_TOKEN"))
         .map_err(|_| "Missing DITTO_PLAYGROUND_TOKEN (or DITTO_SHARED_TOKEN)".to_string())?;
-    Ok((app_id, playground_token))
+    let auth_url = std::env::var("DITTO_AUTH_URL")
+        .map_err(|_| "Missing DITTO_AUTH_URL".to_string())?;
+    Ok((app_id, playground_token, auth_url))
 }
 
 async fn load_state(ditto: &Ditto) -> Result<AppState, String> {
