@@ -28,7 +28,7 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
               Select folder
             </Button>
 
-            <Button size="lg" variant="outline" className="w-full" onClick={() => navigate("/gallery")}>
+            <Button size="lg" variant="outline" className="w-full" onClick={() => navigate("/gallery", { state: { photos } })}>
               View Gallery
             </Button>
           </div>
