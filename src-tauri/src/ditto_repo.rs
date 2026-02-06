@@ -110,6 +110,18 @@ impl DittoRepository {
         ditto
             .disable_sync_with_v3()
             .map_err(|e| format!("Failed to disable v3 sync: {e}"))?;
+
+        ditto.update_transport_config(|transport_config| {
+            //BluetoothLe
+            transport_config.peer_to_peer.bluetooth_le.enabled = false;
+            //Local Area Network
+            transport_config.peer_to_peer.lan.enabled = false;
+            // Apple Wireless Direct Link
+            // transport_config.peer_to_peer.awdl.enabled = false;
+            //wifi aware
+            // transport_config.peer_to_peer.wifi_aware.enabled = false;
+        });
+
         ditto
             .start_sync()
             .map_err(|e| format!("Failed to start Ditto sync: {e}"))?;
