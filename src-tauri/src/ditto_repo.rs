@@ -133,6 +133,8 @@ impl DittoRepository {
             });
 
         ditto.update_transport_config(|transport_config| {
+            transport_config.enable_all_peer_to_peer();
+            transport_config.global.sync_group = 0; // all users in 1 big pool!
             transport_config.connect.websocket_urls.clear();
             transport_config.connect.websocket_urls.insert(websocket_url);
             //BluetoothLe
@@ -148,6 +150,8 @@ impl DittoRepository {
         ditto
             .start_sync()
             .map_err(|e| format!("Failed to start Ditto sync: {e}"))?;
+    
+        ditto.sync().register_subscription_v2("SELECT * FROM photos").map_err(|e| format!("Failed to register subscription: {e}"))?;
 
         let initial_state = load_state(&ditto).await?;
         let state = Arc::new(RwLock::new(initial_state));
