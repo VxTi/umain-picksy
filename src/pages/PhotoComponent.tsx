@@ -1,21 +1,19 @@
+import { PhotoConfig } from "@/backend/schemas";
 import React from "react";
 
 type ImageViewProps = {
 	src: string;
 	alt?: string;
-	brightness?: number; // percent
-	blur?: number;
-	saturation?: number;
+	config: PhotoConfig;
 };
 
 export const PhotoComponent: React.FC<ImageViewProps> = ({
+	config,
 	src,
 	alt = "",
-	brightness = 100,
-	blur = 0,
-	saturation = 0,
 }) => {
-	const filter = `brightness(${brightness}%) saturate(${saturation}%) blur(${blur}px)`;
+	const { brightness, saturation, blur } = config;
+	const filter = `brightness(${brightness ?? 100}%) saturate(${saturation ?? 50}%) blur(${blur ?? 0}px)`;
 	return (
 		<div
 			style={{

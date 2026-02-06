@@ -26,17 +26,24 @@ export const invoke = <C extends Command>(
 	return Effect.gen(function* () {
 		const raw = yield* Effect.tryPromise({
 			try: () => invokeCore(command, args as InvokeArgs),
-			catch: (error) => new InvokeFailedError({ cause: error }),
+			catch: (error) => {
+				console.error(
+					`An error occurred during invoke ${command}: `,
+					error,
+					resultSchema,
+				);
+				return new InvokeFailedError({ cause: error });
+			},
 		});
 		const decoded = yield* Schema.decodeUnknown(
 			resultSchema as unknown as Schema.Schema<Result<C>, unknown>,
 		)(raw).pipe(
-			Effect.mapError(
-				(e) =>
-					new BackendUnexpectedDataError({
-						cause: ParseResult.TreeFormatter.formatErrorSync(e),
-					}),
-			),
+			Effect.mapError((e) => {
+				console.error(`An error occurred: ${command}`, e, resultSchema);
+				return new BackendUnexpectedDataError({
+					cause: ParseResult.TreeFormatter.formatErrorSync(e),
+				});
+			}),
 		);
 		return decoded as Result<C>;
 	});

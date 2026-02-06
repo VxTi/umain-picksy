@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 import PhotoEditorSidebar from "../components/photo-editor-sidebar";
 import { PhotoComponent } from "./PhotoComponent";
@@ -38,6 +39,7 @@ function PhotoEditor() {
 				blur: photo.config?.blur ?? 0,
 			});
 		}
+		toast.info("Images saved successfully");
 	};
 
 	const onBrightnessChange = (brightness: number) => {
@@ -128,9 +130,7 @@ function PhotoEditor() {
 							<PhotoComponent
 								src={photo.base64}
 								alt={photo.filename}
-								brightness={photo.config?.brightness ?? 100}
-								blur={photo.config?.blur ?? 0}
-								saturation={photo.config?.saturation ?? 100}
+								config={photo.config ?? {}}
 							/>
 							{editingPhotos.length > 1 && (
 								<span className="mt-2 text-xs font-medium text-muted-foreground">
