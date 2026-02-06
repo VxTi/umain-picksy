@@ -74,7 +74,7 @@ export default function EditingSettingsBar({
               value={[blur]}
               onValueChange={(v) => onBlurChange(v[0])}
               min={0}
-              max={100}
+              max={10}
               step={1}
             />
           </div>
