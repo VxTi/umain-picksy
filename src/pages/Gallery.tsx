@@ -107,7 +107,10 @@ function Gallery() {
 								disabled={selectedImages.length === 0}
 							>
 								<Trash2Icon />
-								Delete Selected
+								Delete{" "}
+								{selectedImages.length === 1
+									? "image"
+									: `${selectedImages.length} images`}
 							</Button>
 						)}
 						<Button

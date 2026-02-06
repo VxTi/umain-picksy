@@ -3,7 +3,7 @@ import { useCallback } from "react";
 
 import {
 	selectSourceFolder,
-	addPhotoToLibrary,
+	addPhotosToLibrary,
 	analyzeImageMetadata,
 } from "@/lib/vision";
 import { clearLibrary } from "@/lib/library";
@@ -13,7 +13,7 @@ export default function Home() {
 	const photos = usePhotos();
 
 	const handleAddPhoto = useCallback(async () => {
-		await addPhotoToLibrary();
+		await addPhotosToLibrary();
 	}, []);
 
 	const handleSelectFolder = useCallback(async () => {

@@ -2,7 +2,6 @@ import { SaveIcon } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/button";
 import { twMerge } from "tailwind-merge";
 import EditingSettingsBar from "./EditingSettingsBar";
@@ -61,7 +60,7 @@ function Edit() {
 	return (
 		<main className="h-screen bg-background flex flex-col overflow-hidden">
 			<div className="p-4 flex-shrink-0">
-				<div className="flex items-center justify-between mb-4">
+				<div className="flex items-center justify-between">
 					<p className="text-sm text-muted-foreground">
 						{images.length > 0
 							? `${images.length} image(s) selected for editing`
@@ -102,9 +101,9 @@ function Edit() {
 				</div>
 			</div>
 
-			<div className="flex flex-1 overflow-hidden">
+			<div className="flex flex-1 overflow-hidden bg-black/5">
 				{/* Image Preview Area */}
-				<div className="flex-1 flex justify-center items-center bg-black/5 p-4 gap-4 overflow-hidden flex-wrap *:basis-50">
+				<div className="flex-1 flex justify-center items-center  p-4 gap-4 overflow-hidden flex-wrap *:basis-50">
 					{image1 && (
 						<div
 							className={twMerge(
@@ -151,21 +150,18 @@ function Edit() {
 					)}
 				</div>
 
-				{/* Settings Sidebar */}
-				<div className="w-87.5 border-l bg-card overflow-y-auto">
-					<EditingSettingsBar
-						brightness={activeImageIndex === 0 ? brightness1 : brightness2}
-						saturation={activeImageIndex === 0 ? saturation1 : saturation2}
-						blur={activeImageIndex === 0 ? blur1 : blur2}
-						onBrightnessChange={
-							activeImageIndex === 0 ? setBrightness1 : setBrightness2
-						}
-						onSaturationChange={
-							activeImageIndex === 0 ? setSaturation1 : setSaturation2
-						}
-						onBlurChange={activeImageIndex === 0 ? setBlur1 : setBlur2}
-					/>
-				</div>
+				<EditingSettingsBar
+					brightness={activeImageIndex === 0 ? brightness1 : brightness2}
+					saturation={activeImageIndex === 0 ? saturation1 : saturation2}
+					blur={activeImageIndex === 0 ? blur1 : blur2}
+					onBrightnessChange={
+						activeImageIndex === 0 ? setBrightness1 : setBrightness2
+					}
+					onSaturationChange={
+						activeImageIndex === 0 ? setSaturation1 : setSaturation2
+					}
+					onBlurChange={activeImageIndex === 0 ? setBlur1 : setBlur2}
+				/>
 			</div>
 		</main>
 	);
