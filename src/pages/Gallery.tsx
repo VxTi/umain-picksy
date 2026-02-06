@@ -94,8 +94,8 @@ function Gallery() {
 
 	return (
 		<main className="min-h-screen bg-background">
-			<div className="p-4">
-				<div className="flex items-center justify-between mb-4">
+			<div className="p-4 pt-8">
+				<div className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 py-4">
 					<p className="text-sm text-muted-foreground">
 						Select up to 2 images ({selectedImages.length}/2 selected)
 					</p>
