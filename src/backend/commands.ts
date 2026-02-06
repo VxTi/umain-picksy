@@ -20,11 +20,5 @@ export const CommandSchemas = {
 } as const satisfies Record<string, CommandEntry>;
 
 export type Command = keyof typeof CommandSchemas;
-export type Args<C extends Command> = (typeof CommandSchemas)[C]["args"] extends
-  Schema.Schema<infer A, any, any>
-  ? A
-  : never;
-export type Result<C extends Command> =
-  (typeof CommandSchemas)[C]["result"] extends Schema.Schema<infer A, any, any>
-    ? A
-    : never;
+export type Args<C extends Command> = Schema.Schema.Type<(typeof CommandSchemas)[C]["args"]>;
+export type Result<C extends Command> = Schema.Schema.Type<(typeof CommandSchemas)[C]["result"]>;
