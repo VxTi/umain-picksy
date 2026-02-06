@@ -28,12 +28,20 @@ pub struct ImageMetadata {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PhotoConfig {
+    pub brightness: f64,
+    pub saturation: f64,
+    pub blur: f64,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Photo {
     #[serde(default)]
     pub id: String,
     pub image_path: String,
+    pub filename: String,
     pub base64: String,
-    pub metadata: Option<ImageMetadata>,
+    pub config: Option<PhotoConfig>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -75,6 +83,7 @@ struct PhotoDocument {
     content_commit_id: Option<u64>,
     #[serde(default)]
     author_peer_id: Option<String>,
+    pub config: Option<PhotoConfig>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -85,6 +94,7 @@ pub struct PhotoPayload {
     pub base64: String,
     pub sync_status: SyncStatus,
     pub author_peer_id: Option<String>,
+    pub config: Option<PhotoConfig>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -259,11 +269,6 @@ impl DittoRepository {
         let mut seen = std::collections::HashSet::new();
 
         for image in images {
-            let filename = std::path::Path::new(&image.image_path)
-                .file_name()
-                .map(|name| name.to_string_lossy().to_string())
-                .unwrap_or_else(|| image.image_path.clone());
-
             let doc_id = image.id.clone();
 
             if !seen.insert(doc_id.clone()) {
@@ -272,11 +277,12 @@ impl DittoRepository {
 
             let doc = PhotoDocument {
                 _id: doc_id.clone(),
-                filename: filename.clone(),
+                filename: image.filename.clone(),
                 image_path: image.image_path.clone(),
                 base64: image.base64.clone(),
                 content_commit_id: None,
                 author_peer_id: Some(author_peer_id.clone()),
+                config: image.config.clone(),
             };
 
             let result = store
@@ -336,6 +342,22 @@ impl DittoRepository {
             .map_err(|e| format!("Failed to clear Ditto photos: {e}"))?;
 
         self.dispatch(AppAction::ClearImageLibraryContent).await?;
+        Ok(())
+    }
+
+    pub async fn update_photo_config(
+        &self,
+        id: &str,
+        config: PhotoConfig,
+    ) -> Result<(), String> {
+        let store = self.ditto.store();
+        store
+            .execute_v2((
+                format!("UPDATE {PHOTOS_COLLECTION} SET config = :config WHERE _id = :id"),
+                serde_json::json!({ "config": config, "id": id }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to update photo config: {e}"))?;
         Ok(())
     }
 }
@@ -563,6 +585,7 @@ fn collect_photo_payloads(query_result: &QueryResult, sync_info: &SyncInfo) -> V
                 base64: doc.base64,
                 sync_status,
                 author_peer_id: doc.author_peer_id,
+                config: doc.config,
             }
         })
         .collect()

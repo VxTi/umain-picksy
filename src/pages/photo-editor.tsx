@@ -1,34 +1,33 @@
-import { usePhotoLibrary }          from '@/backend/photo-library-context';
-import { EventType }                from "@/lib/events";
-import { SaveIcon }                 from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect }      from "react";
-import { listen }                   from "@tauri-apps/api/event";
-import { Button }                   from "@/components/ui/button";
-import { twMerge }                  from "tailwind-merge";
-import PhotoEditorSidebar           from "../components/photo-editor-sidebar";
-import { PhotoComponent }           from "./PhotoComponent";
-import type { ImageItem }           from "./Gallery";
+import { usePhotoLibrary } from "@/backend/photo-library-context";
+import { Photo } from "@/backend/schemas";
+import { EventType } from "@/lib/events";
+import { SaveIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { Button } from "@/components/ui/button";
+import { twMerge } from "tailwind-merge";
+import PhotoEditorSidebar from "../components/photo-editor-sidebar";
+import { PhotoComponent } from "./PhotoComponent";
 
 function PhotoEditor() {
-	const { photos } = usePhotoLibrary();
-	const location = useLocation();
+	const { photos, setPhotos, saveImageConfig } = usePhotoLibrary();
 	const navigate = useNavigate();
-	const [images, setImages] = useState<ImageItem[]>(
-		(location.state?.images as ImageItem[]) || [],
-	);
 
 	// Listen for images from the gallery window via events
 	useEffect(() => {
-		const unlisten = listen<ImageItem[]>(EventType.EDIT_IMAGES, (event) => {
+		const unlisten = listen<Photo[]>(EventType.EDIT_IMAGES, (event) => {
 			console.log("Edit received images via event:", event.payload.length);
-			setImages(event.payload);
+			setPhotos(event.payload);
 		});
 
 		return () => {
 			unlisten.then((fn) => fn());
 		};
 	}, []);
+
+	const image1 = photos[0];
+	const image2 = photos[1];
 
 	// editing state for image 1
 	const [brightness1, setBrightness1] = useState(100);
@@ -40,33 +39,54 @@ function PhotoEditor() {
 	const [blur2, setBlur2] = useState(0);
 	const [saturation2, setSaturation2] = useState(100);
 
+	// Initialize state from photos
+	useEffect(() => {
+		if (image1) {
+			setBrightness1(image1.config?.brightness ?? 100);
+			setBlur1(image1.config?.blur ?? 0);
+			setSaturation1(image1.config?.saturation ?? 100);
+		}
+		if (image2) {
+			setBrightness2(image2.config?.brightness ?? 100);
+			setBlur2(image2.config?.blur ?? 0);
+			setSaturation2(image2.config?.saturation ?? 100);
+		}
+	}, [image1?.id, image2?.id]);
+
 	const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-	const image1 = photos[0];
-	const image2 = photos[1];
-
-	const handleSave = () => {
+	const handleSave = async () => {
 		if (image1) {
 			console.log(
 				`Image 1 (${image1.id}) edits: blur=${blur1}, brightness=${brightness1}, saturation=${saturation1}`,
 			);
+			await saveImageConfig(image1.id, {
+				brightness: brightness1,
+				saturation: saturation1,
+				blur: blur1,
+			});
 		}
 		if (image2) {
 			console.log(
 				`Image 2 (${image2.id}) edits: blur=${blur2}, brightness=${brightness2}, saturation=${saturation2}`,
 			);
+			await saveImageConfig(image2.id, {
+				brightness: brightness2,
+				saturation: saturation2,
+				blur: blur2,
+			});
 		}
 	};
 
-	const isDouble = images.length === 2;
+	const isDouble = photos.length === 2;
 
 	return (
 		<main className="h-screen bg-background flex flex-col overflow-hidden">
 			<div className="p-4 shrink-0">
 				<div className="flex items-center justify-between">
 					<p className="text-sm text-muted-foreground">
-						{images.length > 0
-							? `${images.length} image(s) selected for editing`
+						{photos.length > 0
+							? `${photos.length} image(s) selected for editing`
 							: "No images selected"}
 					</p>
 
@@ -95,7 +115,7 @@ function PhotoEditor() {
 						>
 							<SaveIcon className="size-4" /> Save edits
 						</Button>
-						{images.length === 0 && (
+						{photos.length === 0 && (
 							<Button variant="outline" onClick={() => navigate("/gallery")}>
 								Go to Gallery
 							</Button>

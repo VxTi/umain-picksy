@@ -203,9 +203,13 @@ fn process_image_file(path: String) -> Result<Photo, String> {
 
     Ok(Photo {
         id,
+        filename: std::path::Path::new(&path)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.clone()),
         image_path: path,
         base64: base64_content,
-        metadata: None,
+        config: None,
     })
 }
 
@@ -215,7 +219,6 @@ pub async fn add_photos_from_folder(
     repo: State<'_, DittoRepository>,
 ) -> Result<Option<Vec<Photo>>, String> {
     use tauri_plugin_dialog::FilePath;
-    use tauri_plugin_store::StoreExt;
 
     let (tx, rx) = std::sync::mpsc::channel();
 
@@ -336,6 +339,17 @@ pub async fn clear_library(repo: State<'_, DittoRepository>) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub async fn get_photos_from_library(repo: State<'_, DittoRepository>) -> Result<Vec<PhotoPayload>, String> {
+pub async fn get_photos_from_library(
+    repo: State<'_, DittoRepository>,
+) -> Result<Vec<PhotoPayload>, String> {
     repo.get_photos().await
+}
+
+#[tauri::command]
+pub async fn save_photo_config(
+    repo: State<'_, DittoRepository>,
+    id: String,
+    config: crate::ditto_repo::PhotoConfig,
+) -> Result<(), String> {
+    repo.update_photo_config(&id, config).await
 }
