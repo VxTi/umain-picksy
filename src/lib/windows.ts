@@ -24,6 +24,8 @@ export async function openGalleryWindow(photos?: Photo[]) {
     title: "Gallery - Picksy",
     width: 1200,
     height: 800,
+    minWidth: 600,
+    minHeight: 400,
     center: true,
   });
 
@@ -77,6 +79,8 @@ export async function openEditWindow(images?: unknown) {
     title: "Edit - Picksy",
     width: 1400,
     height: 900,
+    minWidth: 800,
+    minHeight: 500,
     center: true,
   });
 

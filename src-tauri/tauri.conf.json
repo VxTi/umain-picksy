@@ -15,7 +15,9 @@
         "label": "main",
         "title": "Picksy",
         "width": 1280,
-        "height": 800
+        "height": 800,
+        "minWidth": 600,
+        "minHeight": 400
       }
     ],
     "security": {
