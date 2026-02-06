@@ -1,9 +1,9 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import type { Photo } from "@/backend/commandStream";
+import { SetLibraryResult } from "@/backend/events";
 
-export async function openGalleryWindow(photos?: Photo[]) {
+export async function openGalleryWindow(photos?: SetLibraryResult["photos"]) {
   // Hide the current (main) window
   const currentWindow = getCurrentWindow();
   await currentWindow.hide();
