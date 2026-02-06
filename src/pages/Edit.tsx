@@ -26,7 +26,7 @@ function Edit() {
     } as ImageItem);
 
   return (
-    <main className="min-h-screen bg-background flex flex-col">
+    <main className="max-h-screen bg-background flex flex-col">
       <TopBar title="Edit Page" />
 
       <div className="p-4">
@@ -47,7 +47,7 @@ function Edit() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Image Preview */}
-        <div className="w-[70%] flex justify-center items-center overflow-hidden bg-muted">
+        <div className="w-[70%] flex justify-center items-center overflow-hidden">
           <PhotoComponent
             src={image.url}
             alt={image.title}
@@ -58,7 +58,7 @@ function Edit() {
         </div>
 
         {/* Settings Sidebar */}
-        <div className="w-[30%] h-full overflow-auto border-l bg-card">
+        <div className="w-[30%] h-full overflow-auto">
           <EditingSettingsBar
             brightness={brightness}
             saturation={saturation}
