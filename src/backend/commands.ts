@@ -7,7 +7,7 @@ type CommandEntry = {
 	result: Schema.Schema<any, any, any>;
 };
 
-const EmptySchema = Schema.Struct({});
+const EmptySchema = Schema.NullOr(Schema.Struct({}));
 
 const SavePhotoConfigArgsSchema = Schema.Struct({
 	id: Schema.String,

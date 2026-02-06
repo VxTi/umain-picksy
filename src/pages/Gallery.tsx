@@ -2,6 +2,7 @@ import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Spinner } from "@/components/ui/spinner";
 import { EventType } from "@/lib/events";
 import { SyncStatus } from "@/lib/synchronization";
+import { PhotoComponent } from "@/pages/PhotoComponent";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
 import { PencilIcon, Trash2Icon } from "lucide-react";
@@ -289,10 +290,10 @@ function AlbumPhoto({
 					: "border-transparent hover:border-muted-foreground/50",
 			)}
 		>
-			<img
+			<PhotoComponent
 				src={image.base64}
 				alt={image.filename}
-				className="w-full h-48 object-cover"
+				config={image.config ?? {}}
 			/>
 			<div
 				className={twMerge(

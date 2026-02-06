@@ -5,7 +5,6 @@ use rexif::{ExifTag, TagValue};
 use serde::Serialize;
 use sha2::{Digest, Sha256};
 use std::io::Cursor;
-use std::time::Instant;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
