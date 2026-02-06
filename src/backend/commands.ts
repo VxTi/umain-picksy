@@ -23,6 +23,10 @@ export const CommandSchemas = {
 		args: Schema.Struct({}),
 		result: Schema.Struct({}),
 	},
+  add_photo_to_library: {
+    args: Schema.Struct({}),
+    result: Schema.Array(PhotoSchema),
+  }
 } as const satisfies Record<string, CommandEntry>;
 
 export type Command = keyof typeof CommandSchemas;
