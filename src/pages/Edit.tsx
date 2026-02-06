@@ -1,6 +1,9 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { TopBar } from "@/components/TopBar";
 import { Button } from "@/components/ui/button";
+import EditingSettingsBar from "./EditingSettingsBar";
+import { PhotoComponent } from "./PhotoComponent";
 import type { ImageItem } from "./Gallery";
 
 function Edit() {
@@ -8,47 +11,63 @@ function Edit() {
   const navigate = useNavigate();
   const images = (location.state?.images as ImageItem[]) || [];
 
+  // editing state
+  const [brightness, setBrightness] = useState(100);
+  const [blur, setBlur] = useState(0);
+  const [saturation, setSaturation] = useState(100);
+
+  // fallback mock image if nothing selected
+  const image =
+    images[0] ??
+    ({
+      id: "mock",
+      title: "Mock image",
+      url: "/photo_to_edit.jpeg",
+    } as ImageItem);
+
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background flex flex-col">
       <TopBar title="Edit Page" />
 
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm text-muted-foreground">
-            {images.length} image(s) selected for editing
+            {images.length > 0
+              ? `${images.length} image(s) selected for editing`
+              : "No images selected — showing mock image"}
           </p>
-        </div>
 
-        {images.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No images selected.</p>
-            <Button
-              className="mt-4"
-              onClick={() => navigate("/gallery")}
-            >
+          {images.length === 0 && (
+            <Button variant="outline" onClick={() => navigate("/gallery")}>
               Go to Gallery
             </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {images.map((image) => (
-              <div
-                key={image.id}
-                className="rounded-lg overflow-hidden border bg-card"
-              >
-                <img
-                  src={image.url}
-                  alt={image.title}
-                  className="w-full h-64 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="font-semibold">{image.title}</h3>
-                  <p className="text-sm text-muted-foreground">ID: {image.id}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Image Preview */}
+        <div className="w-[70%] flex justify-center items-center overflow-hidden bg-muted">
+          <PhotoComponent
+            src={image.url}
+            alt={image.title}
+            brightness={brightness}
+            blur={blur}
+            saturation={saturation}
+          />
+        </div>
+
+        {/* Settings Sidebar */}
+        <div className="w-[30%] h-full overflow-auto border-l bg-card">
+          <EditingSettingsBar
+            brightness={brightness}
+            saturation={saturation}
+            blur={blur}
+            onBrightnessChange={setBrightness}
+            onSaturationChange={setSaturation}
+            onBlurChange={setBlur}
+          />
+        </div>
       </div>
     </main>
   );
