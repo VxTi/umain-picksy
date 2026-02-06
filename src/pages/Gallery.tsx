@@ -1,10 +1,10 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Spinner } from "@/components/ui/spinner";
 import { EventType } from "@/lib/events";
-import { SyncStatus } from "@/lib/synchronization";
 import { PhotoComponent } from "@/pages/PhotoComponent";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PencilIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
@@ -140,8 +140,8 @@ export default function Gallery() {
 	}, [filteredPhotoIds, filteredPhotos, selectedImages]);
 
 	return (
-		<main className="min-h-screen bg-background">
-			<div className="p-4">
+		<main className="h-screen bg-background flex flex-col overflow-hidden">
+			<div className="flex-1 overflow-y-auto">
 				<GalleryNavigationBar
 					selectedImages={selectedImages}
 					authorFilter={authorFilter}
@@ -247,15 +247,17 @@ function GalleryNavigationBar({
 
 	const onlineCount = presence?.remote_peers.length ?? 0;
 	const onlineLabel = onlineCount > 0 ? `${onlineCount + 1} online` : "Offline";
-	const onlineDotClass = onlineCount > 0 ? "bg-emerald-500" : "bg-red-500";
 
 	return (
-		<div className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 py-4">
-			<p className="text-sm text-muted-foreground">
+		<div
+			onMouseDown={() => getCurrentWindow().startDragging()}
+			className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 px-3 py-4"
+		>
+			<p className="text-sm text-muted-foreground select-none pointer-events-none">
 				Click to select, Shift-click for multi-select ({selectedImages.length}{" "}
 				selected)
 			</p>
-			<div className="relative flex items-center gap-2">
+			<div className="relative flex items-center gap-2 text-sm! *:px-2!">
 				<FilterUsers
 					photos={photos}
 					presence={presence}
@@ -279,9 +281,19 @@ function GalleryNavigationBar({
 					}}
 				>
 					<span
-						className={`inline-block h-2 w-2 rounded-full ${onlineDotClass}`}
+						className={twMerge(
+							"inline-block h-2 w-2 rounded-full",
+							onlineCount > 0 ? "bg-emerald-500" : "bg-red-500",
+						)}
 					/>
-					{onlineLabel}
+					<div
+						key={onlineLabel}
+						className="animate-in fade-in slide-in-from-top-1 bg-muted/50 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground cursor-help"
+						title="Online peers"
+						onMouseDown={(e) => e.stopPropagation()}
+					>
+						{onlineLabel}
+					</div>
 				</Button>
 				{selectedImages.length > 0 && (
 					<Button
@@ -296,14 +308,40 @@ function GalleryNavigationBar({
 							: `${selectedImages.length} images`}
 					</Button>
 				)}
-				<Button
-					onClick={handleEditClick}
-					disabled={selectedImages.length === 0}
-				>
-					<PencilIcon />
-					Edit Selected
-				</Button>
-				{showPeers && <ActiveUsers presence={presence} />}
+				<div className="flex items-center gap-2">
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						onClick={handleEditClick}
+						disabled={selectedImages.length === 0}
+						className="text-muted-foreground hover:text-foreground"
+						title="Edit selected"
+						onMouseDown={(e) => e.stopPropagation()}
+					>
+						<PencilIcon className="size-4" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						className="text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10"
+						title="Add to favorites"
+						onMouseDown={(e) => e.stopPropagation()}
+					>
+						<StarIcon className="size-4" />
+					</Button>
+					<Button
+						variant="ghost"
+						size="icon-sm"
+						onClick={handleDeleteClick}
+						disabled={selectedImages.length === 0}
+						className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+						title="Delete selected"
+						onMouseDown={(e) => e.stopPropagation()}
+					>
+						<Trash2Icon className="size-4" />
+					</Button>
+				</div>
+				{showPeers && presence && <ActiveUsers presence={presence} />}
 			</div>
 		</div>
 	);
@@ -360,20 +398,6 @@ function FilterUsers({
 		</select>
 	);
 }
-
-function getSyncStatusLabel(status: string | undefined) {
-	switch (status) {
-		case SyncStatus.SYNCED:
-			return "Synced";
-		case SyncStatus.PENDING:
-			return "Syncing";
-		case SyncStatus.DISCONNECTED:
-			return "Offline";
-		default:
-			return "Unknown";
-	}
-}
-
 function AlbumPhoto({
 	image,
 	selectedImages,

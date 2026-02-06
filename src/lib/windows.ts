@@ -28,6 +28,8 @@ export async function openGalleryWindow(photos?: SetLibraryResult["photos"]) {
 		minWidth: 600,
 		minHeight: 400,
 		center: true,
+		hiddenTitle: true,
+		titleBarStyle: "overlay",
 	});
 
 	// Wait for window to be created, then send photos
@@ -82,6 +84,8 @@ export async function openEditWindow(images?: unknown) {
 		minWidth: 800,
 		minHeight: 500,
 		center: true,
+		hiddenTitle: true,
+		titleBarStyle: "overlay",
 	});
 
 	// Wait for window to be created, then send images

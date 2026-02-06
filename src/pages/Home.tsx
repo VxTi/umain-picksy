@@ -6,7 +6,7 @@ export default function Home() {
 		usePhotoLibrary();
 
 	return (
-		<main className="container bg-gray-100 min-h-screen">
+		<main className="h-screen bg-background overflow-hidden">
 			<PicksyView
 				photos={photos}
 				onSelectFolder={addPhotosFromFolder}

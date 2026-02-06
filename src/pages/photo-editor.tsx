@@ -5,6 +5,7 @@ import { SaveIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
@@ -76,9 +77,12 @@ function PhotoEditor() {
 
 	return (
 		<main className="h-screen bg-background flex flex-col overflow-hidden">
-			<div className="p-4 shrink-0">
+			<div
+				className="p-4 shrink-0"
+				onMouseDown={() => getCurrentWindow().startDragging()}
+			>
 				<div className="flex items-center justify-between">
-					<p className="text-sm text-muted-foreground">
+					<p className="text-sm text-muted-foreground select-none pointer-events-none">
 						{hasEditablePhotos
 							? `${editingPhotos.length} image(s) selected for editing`
 							: "No images selected"}
@@ -86,7 +90,10 @@ function PhotoEditor() {
 
 					<div className="flex gap-2">
 						{editingPhotos.length > 1 && (
-							<div className="flex bg-muted rounded-lg p-1">
+							<div
+								className="flex bg-muted rounded-lg p-1"
+								onMouseDown={(e) => e.stopPropagation()}
+							>
 								{editingPhotos.map((photo, i) => (
 									<Button
 										key={photo.id}
@@ -100,14 +107,19 @@ function PhotoEditor() {
 							</div>
 						)}
 						<Button
+							onMouseDown={(e) => e.stopPropagation()}
 							onClick={handleSave}
 							className="rounded-full font-semibold bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/30 hover:scale-102 transition-all"
 						>
 							<SaveIcon className="size-4" />
-							<span className='text-foreground'> Save edits</span>
+							<span className="text-foreground"> Save edits</span>
 						</Button>
 						{!hasEditablePhotos && (
-							<Button variant="outline" onClick={() => navigate("/gallery")}>
+							<Button
+								variant="outline"
+								onClick={() => navigate("/gallery")}
+								onMouseDown={(e) => e.stopPropagation()}
+							>
 								Go to Gallery
 							</Button>
 						)}
