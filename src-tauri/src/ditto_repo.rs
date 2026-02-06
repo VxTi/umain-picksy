@@ -562,21 +562,27 @@ async fn upsert_photos_from_paths_with_ditto(
     );
 
     let start = Instant::now();
-    let insert_query = format!(
-        "INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS (:doc) ON ID CONFLICT DO UPDATE"
-    );
     let timeout_after = std::time::Duration::from_secs(60);
     let mut ticker = tokio::time::interval(std::time::Duration::from_secs(5));
     let store_for_task = store.clone();
     let docs_for_task = docs;
     let mut join = tauri::async_runtime::spawn_blocking(move || -> Result<(), String> {
         tauri::async_runtime::block_on(async move {
-            for doc in docs_for_task {
+            const INSERT_BATCH_SIZE: usize = 50;
+            for chunk in docs_for_task.chunks(INSERT_BATCH_SIZE) {
+                let mut query_parts = Vec::with_capacity(chunk.len());
+                let mut payload = serde_json::Map::with_capacity(chunk.len());
+                for (idx, doc) in chunk.iter().enumerate() {
+                    let key = format!("doc{idx}");
+                    query_parts.push(format!("(:{key})"));
+                    payload.insert(key, serde_json::to_value(doc).map_err(|e| e.to_string())?);
+                }
+                let insert_query = format!(
+                    "INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS {} ON ID CONFLICT DO UPDATE",
+                    query_parts.join(", ")
+                );
                 store_for_task
-                    .execute_v2((
-                        insert_query.clone(),
-                        serde_json::json!({ "doc": doc }),
-                    ))
+                    .execute_v2((insert_query, serde_json::Value::Object(payload)))
                     .await
                     .map_err(|e| format!("Failed to upsert Ditto photos: {e}"))?;
             }
