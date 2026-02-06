@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Button } from "@/components/ui/button";
+import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 import PhotoEditorSidebar from "../components/photo-editor-sidebar";
@@ -95,33 +95,36 @@ function PhotoEditor() {
 								onMouseDown={(e) => e.stopPropagation()}
 							>
 								{editingPhotos.map((photo, i) => (
-									<Button
+									<ButtonWithTooltip
 										key={photo.id}
 										variant={activeImageIndex === i ? "default" : "ghost"}
 										size="sm"
 										onClick={() => setActiveImageIndex(i)}
+										tooltip={`Edit Image ${i + 1}: ${photo.filename}`}
 									>
 										Image {i + 1}
-									</Button>
+									</ButtonWithTooltip>
 								))}
 							</div>
 						)}
-						<Button
+						<ButtonWithTooltip
 							onMouseDown={(e) => e.stopPropagation()}
 							onClick={handleSave}
 							className="rounded-full font-semibold bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/30 hover:scale-102 transition-all"
+							tooltip="Save adjustments to all edited photos"
 						>
 							<SaveIcon className="size-4" />
 							<span className="text-foreground"> Save edits</span>
-						</Button>
+						</ButtonWithTooltip>
 						{!hasEditablePhotos && (
-							<Button
+							<ButtonWithTooltip
 								variant="outline"
 								onClick={() => navigate("/gallery")}
 								onMouseDown={(e) => e.stopPropagation()}
+								tooltip="Return to the gallery view"
 							>
 								Go to Gallery
-							</Button>
+							</ButtonWithTooltip>
 						)}
 					</div>
 				</div>

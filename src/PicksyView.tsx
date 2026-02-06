@@ -1,5 +1,5 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
-import { Button } from "@/components/ui/button";
+import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -42,33 +42,45 @@ export default function PicksyView({
 					</div>
 
 					<div className="flex flex-col gap-2 w-full">
-						<Button size="lg" className="w-full" onClick={onAddPhoto}>
+						<ButtonWithTooltip
+							size="lg"
+							className="w-full"
+							onClick={onAddPhoto}
+							tooltip="Add a new photo to the library"
+						>
 							<ImagePlusIcon /> Add photo
-						</Button>
+						</ButtonWithTooltip>
 
-						<Button size="lg" className="w-full" onClick={onSelectFolder}>
+						<ButtonWithTooltip
+							size="lg"
+							className="w-full"
+							onClick={onSelectFolder}
+							tooltip="Select a folder to import photos from"
+						>
 							<FolderIcon /> Select photo folder
-						</Button>
+						</ButtonWithTooltip>
 
-						<Button
+						<ButtonWithTooltip
 							size="lg"
 							variant="outline"
 							className="w-full"
 							onClick={() => openGalleryWindow(photos)}
+							tooltip="Open the gallery to view all photos"
 						>
 							<ImagesIcon />
 							View Library
-						</Button>
+						</ButtonWithTooltip>
 
-						<Button
+						<ButtonWithTooltip
 							size="lg"
 							variant="destructive"
 							className="w-full"
 							onClick={onClearLibrary}
+							tooltip="Remove all photos from the library"
 						>
 							<Trash2Icon />
 							Clear library
-						</Button>
+						</ButtonWithTooltip>
 					</div>
 
 					<p className="text-xs text-muted-foreground">

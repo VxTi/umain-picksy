@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { ArrowLeft } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
@@ -11,7 +11,7 @@ export function TopBar({ title }: TopBarProps) {
 	const navigate = useNavigate();
 
 	const handleDrag = () => {
-		getCurrentWindow().startDragging();
+		void getCurrentWindow().startDragging();
 	};
 
 	return (
@@ -19,9 +19,10 @@ export function TopBar({ title }: TopBarProps) {
 			className="flex items-center gap-2 py-2 px-4 border-b bg-gray-100 select-none cursor-default"
 			onMouseDown={handleDrag}
 		>
-			<Button
+			<ButtonWithTooltip
 				variant="ghost"
 				size="icon-sm"
+				tooltip="Go back"
 				onClick={(e) => {
 					e.stopPropagation();
 					navigate(-1);
@@ -29,7 +30,7 @@ export function TopBar({ title }: TopBarProps) {
 				onMouseDown={(e) => e.stopPropagation()}
 			>
 				<ArrowLeft className="size-4 text-gray-600" />
-			</Button>
+			</ButtonWithTooltip>
 			<h1 className="text-base font-semibold text-gray-700">{title}</h1>
 		</header>
 	);

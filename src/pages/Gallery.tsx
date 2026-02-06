@@ -8,7 +8,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { PencilIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
-import { Button } from "@/components/ui/button";
+import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
@@ -178,17 +178,20 @@ export default function Gallery() {
 						<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
 							ESC
 						</span>
-						<button
+						<ButtonWithTooltip
+							variant="ghost"
+							size="icon-xs"
 							type="button"
 							onClick={(event) => {
 								event.stopPropagation();
 								setFullScreenPhoto(null);
 							}}
 							aria-label="Close full screen"
-							className="p-1 text-white/80 transition-colors hover:text-white"
+							className="text-white/80 transition-colors hover:text-white"
+							tooltip="Close full screen"
 						>
 							<XIcon className="h-5 w-5" />
-						</button>
+						</ButtonWithTooltip>
 					</div>
 					<img
 						src={fullScreenPhoto.base64}
@@ -279,7 +282,7 @@ function GalleryNavigationBar({
 					authorFilter={authorFilter}
 					setAuthorFilter={setAuthorFilter}
 				/>
-				<Button
+				<ButtonWithTooltip
 					variant="outline"
 					onMouseEnter={() => setShowPeers(true)}
 					onMouseLeave={() => {
@@ -294,6 +297,7 @@ function GalleryNavigationBar({
 							return next;
 						});
 					}}
+					tooltip="View online peers"
 				>
 					<span
 						className={twMerge(
@@ -301,60 +305,61 @@ function GalleryNavigationBar({
 							onlineCount > 0 ? "bg-emerald-500" : "bg-red-500",
 						)}
 					/>
-					<div
+					<span
 						key={onlineLabel}
 						className="animate-in fade-in slide-in-from-top-1 bg-muted/50 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground cursor-help"
 						title="Online peers"
 						onMouseDown={(e) => e.stopPropagation()}
 					>
 						{onlineLabel}
-					</div>
-				</Button>
+					</span>
+				</ButtonWithTooltip>
 				{selectedImages.length > 0 && (
-					<Button
+					<ButtonWithTooltip
 						variant="destructive"
 						onClick={handleDeleteClick}
 						disabled={selectedImages.length === 0}
+						tooltip="Delete selected images"
 					>
 						<Trash2Icon />
 						Delete{" "}
 						{selectedImages.length === 1
 							? "image"
 							: `${selectedImages.length} images`}
-					</Button>
+					</ButtonWithTooltip>
 				)}
 				<div className="flex items-center gap-2">
-					<Button
+					<ButtonWithTooltip
 						variant="ghost"
 						size="icon-sm"
 						onClick={handleEditClick}
 						disabled={selectedImages.length === 0}
 						className="text-muted-foreground hover:text-foreground"
-						title="Edit selected"
+						tooltip="Edit selected"
 						onMouseDown={(e) => e.stopPropagation()}
 					>
 						<PencilIcon className="size-4" />
-					</Button>
-					<Button
+					</ButtonWithTooltip>
+					<ButtonWithTooltip
 						variant="ghost"
 						size="icon-sm"
 						className="text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10"
-						title="Add to favorites"
+						tooltip="Add to favorites"
 						onMouseDown={(e) => e.stopPropagation()}
 					>
 						<StarIcon className="size-4" />
-					</Button>
-					<Button
+					</ButtonWithTooltip>
+					<ButtonWithTooltip
 						variant="ghost"
 						size="icon-sm"
 						onClick={handleDeleteClick}
 						disabled={selectedImages.length === 0}
 						className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-						title="Delete selected"
+						tooltip="Delete selected"
 						onMouseDown={(e) => e.stopPropagation()}
 					>
 						<Trash2Icon className="size-4" />
-					</Button>
+					</ButtonWithTooltip>
 				</div>
 				{showPeers && presence && <ActiveUsers presence={presence} />}
 			</div>
@@ -476,12 +481,22 @@ function AlbumPhoto({
 	);
 
 	return (
-		<button
-			type="button"
+		<div
 			key={image.id}
 			data-photo-id={image.id}
-			onClick={(event) => handleImageClick(event, image)}
+			onClick={(event) => {
+				// Prevent double trigger if clicking internal buttons
+				if (event.target === event.currentTarget || (event.target instanceof HTMLElement && !event.target.closest("button"))) {
+					handleImageClick(event as unknown as MouseEvent<HTMLButtonElement>, image);
+				}
+			}}
 			onDoubleClick={() => onOpenFullScreen(image)}
+			onKeyDown={(event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					handleImageClick(event as unknown as MouseEvent<HTMLButtonElement>, image);
+				}
+			}}
 			onFocus={() => setActivePhotoId(image.id)}
 			onMouseEnter={() => setActivePhotoId(image.id)}
 			onMouseLeave={() => {
@@ -490,9 +505,10 @@ function AlbumPhoto({
 				}
 			}}
 			tabIndex={isActive ? 0 : -1}
+			role="button"
 			aria-current={isActive ? "true" : undefined}
 			className={twMerge(
-				"relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200",
+				"relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 outline-none",
 				isActive ? "bg-primary/10" : "hover:bg-primary/10",
 				isSelected
 					? "border-primary ring-2 ring-primary ring-offset-2"
@@ -507,7 +523,9 @@ function AlbumPhoto({
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
 			</div>
-			<button
+			<ButtonWithTooltip
+				variant="ghost"
+				size="icon-xs"
 				type="button"
 				onClick={handleFavoriteClick}
 				onDoubleClick={(event) => {
@@ -520,12 +538,13 @@ function AlbumPhoto({
 					"absolute top-2 right-2 p-1 transition-colors",
 					isFavorite ? "text-yellow-400" : "text-white/80 hover:text-white",
 				)}
+				tooltip={isFavorite ? "Remove from favorites" : "Mark as favorite"}
 			>
 				<StarIcon
 					className="h-4 w-4"
 					fill={isFavorite ? "currentColor" : "none"}
 				/>
-			</button>
+			</ButtonWithTooltip>
 			{isSelected && (
 				<div className="absolute top-2 left-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
 					<span className="text-white text-xs font-bold">
@@ -533,7 +552,7 @@ function AlbumPhoto({
 					</span>
 				</div>
 			)}
-		</button>
+		</div>
 	);
 }
 
