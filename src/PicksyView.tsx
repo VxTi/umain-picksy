@@ -71,7 +71,7 @@ export default function PicksyView({
 						{photos.length} photos in library
 					</p>
 					{loading && (
-						<div>
+						<div className="flex items-center gap-1 text-xs">
 							<Spinner />
 							<span>Photos are currently being added to the library.</span>
 						</div>
