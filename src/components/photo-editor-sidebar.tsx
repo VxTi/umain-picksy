@@ -14,7 +14,7 @@ type Props = {
 	//onGrayscaleChange: (value: number) => void;
 };
 
-export default function EditingSettingsBar({
+export default function PhotoEditorSidebar({
 	brightness,
 	saturation,
 	blur,

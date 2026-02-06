@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
 import Home from "./pages/Home";
 import Gallery from "./pages/Gallery";
-import Edit from "./pages/Edit";
+import PhotoEditor from "./pages/photo-editor";
 
 function App() {
 	return (
@@ -14,7 +14,7 @@ function App() {
 				<Routes>
 					<Route path="/" element={<Home />} />
 					<Route path="/gallery" element={<Gallery />} />
-					<Route path="/edit" element={<Edit />} />
+					<Route path="/edit" element={<PhotoEditor />} />
 				</Routes>
 			</BrowserRouter>
 		</PhotoLibraryProvider>
