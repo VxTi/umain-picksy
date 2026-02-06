@@ -3,7 +3,7 @@ use rexif::{ExifTag, TagValue};
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use walkdir::WalkDir;
-use crate::ditto_repo::{AppAction, DittoRepository, Image};
+use crate::ditto_repo::{AppAction, DittoRepository, Photo};
 use base64::{Engine as _, engine::{general_purpose}};
 
 #[derive(Debug, Serialize)]
@@ -149,7 +149,7 @@ fn contains_face(_path: &str) -> Result<bool, String> {
 pub async fn select_images_directory(
     app: AppHandle,
     repo: State<'_, DittoRepository>,
-) -> Result<Option<Vec<Image>>, String> {
+) -> Result<Option<Vec<Photo>>, String> {
     use tauri_plugin_dialog::FilePath;
     use tauri_plugin_store::StoreExt;
 
@@ -171,7 +171,7 @@ pub async fn select_images_directory(
                 .to_string(),
         };
 
-        let mut images: Vec<Image> = Vec::new();
+        let mut images: Vec<Photo> = Vec::new();
 
         for entry in WalkDir::new(&path_str).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
@@ -182,7 +182,7 @@ pub async fn select_images_directory(
 
                         let base64_content = general_purpose::STANDARD.encode(std::fs::read(entry.path()).unwrap());
 
-                        images.push(Image { image_path: path, base64: base64_content, metadata: None });
+                        images.push(Photo { image_path: path, base64: base64_content, metadata: None });
                     }
                 }
             }

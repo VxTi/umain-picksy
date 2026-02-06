@@ -25,7 +25,7 @@ pub struct ImageMetadata {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Image {
+pub struct Photo {
     pub image_path: String,
     pub base64: String,
     pub metadata: Option<ImageMetadata>,
@@ -34,14 +34,14 @@ pub struct Image {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum AppAction {
     SetImageLibraryContent {
-        images: Vec<Image>
+        images: Vec<Photo>
     },
     ClearImageLibraryContent,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct AppState {
-    pub images: Vec<Image>,
+    pub images: Vec<Photo>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -62,7 +62,6 @@ pub struct PhotoPayload {
     pub id: String,
     pub filename: String,
     pub path: String,
-    pub base64: String,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -147,7 +146,7 @@ impl DittoRepository {
         Ok(updated)
     }
 
-    pub async fn upsert_photos_from_paths(&self, images: &[Image]) -> Result<(), String> {
+    pub async fn upsert_photos_from_paths(&self, images: &[Photo]) -> Result<(), String> {
         let store = self.ditto.store();
         let mut seen = std::collections::HashSet::new();
 

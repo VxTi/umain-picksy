@@ -8,14 +8,13 @@ export interface PhotoMetadata {
    model?: string,
 }
 
-export type Photo = {
+export interface Photo {
   base64: string;
   image_path: string;
   metadata?: PhotoMetadata;
   id: string;
   filename: string;
-  path: string;
-};
+}
 
 export type BackendCommand = {
   command: "SetLibrary";

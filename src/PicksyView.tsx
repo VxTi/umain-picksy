@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { useNavigate } from "react-router-dom";
 import type { Photo } from "./backend/commandStream";
 
@@ -41,7 +40,7 @@ export default function PicksyView({ photos, onSelectFolder }: PicksyViewProps) 
             {photos.map((photo, index) => (
               <img
                 key={photo.id ?? index}
-                src={`data:image/jpeg;base64,${photo.base64}`}
+                src={`data:image/png;base64,${photo.base64}`}
                 alt={photo.filename}
                 className="h-20 w-full rounded object-cover"
                 loading="lazy"
