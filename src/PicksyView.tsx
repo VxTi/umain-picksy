@@ -43,15 +43,15 @@ export default function PicksyView({
 							<FolderIcon /> Select photo folder
 						</Button>
 
-						<Button
-							size="lg"
-							variant="outline"
-							className="w-full"
-							onClick={() => openGalleryWindow(photos)}
-						>
-							<ImagesIcon />
-							View Gallery
-						</Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="w-full"
+              onClick={() => openGalleryWindow(photos)}
+            >
+              <ImagesIcon />
+              View Library
+            </Button>
 
 						<Button
 							size="lg"
