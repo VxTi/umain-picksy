@@ -81,15 +81,14 @@ function PhotoEditor() {
 								))}
 							</div>
 						)}
-						<ButtonWithTooltip
+						<button
 							onMouseDown={(e) => e.stopPropagation()}
 							onClick={handleSave}
-							className="rounded-full font-semibold bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-lg shadow-purple-500/30 hover:scale-102 transition-all"
-							tooltip="Save adjustments to all edited photos"
+							className="flex items-center gap-1 rounded-full py-1! font-semibold shadow-lg transition-all text-white! bg-blue-400! hover:bg-blue-100 border border-blue-400"
 						>
 							<SaveIcon className="size-4" />
-							<span className="text-foreground"> Save edits</span>
-						</ButtonWithTooltip>
+							<span className="text-white!"> Save edits</span>
+						</button>
 						{!hasEditablePhotos && (
 							<ButtonWithTooltip
 								variant="outline"

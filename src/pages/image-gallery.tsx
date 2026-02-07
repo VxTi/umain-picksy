@@ -850,7 +850,8 @@ function AlbumPhoto({
 			role="button"
 			aria-current={isActive ? "true" : undefined}
 			className={twMerge(
-				"relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 outline-none",
+				"relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 outline-none" +
+				" shadow-md shadow-black/30",
 				isActive ? "bg-primary/10" : "hover:bg-primary/10",
 				isSelected
 					? "border-primary ring-2 ring-primary ring-offset-2"
@@ -861,7 +862,7 @@ function AlbumPhoto({
 				src={image.base64}
 				alt={image.filename}
 				config={image.config ?? {}}
-				className="shadow-sm shadow-black h-60"
+				className="h-60"
 			/>
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
