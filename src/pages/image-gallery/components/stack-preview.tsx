@@ -1,7 +1,7 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Photo } from "@/backend/schemas";
 import { Button } from "@/components/ui/button";
-import { PhotoComponent } from "@/pages/photo-component";
+import { PhotoComponent } from "@/components/photo-component";
 import { XIcon } from "lucide-react";
 import React, { useMemo } from "react";
 import { toast } from "sonner";

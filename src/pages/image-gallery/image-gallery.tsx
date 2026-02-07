@@ -2,7 +2,7 @@ import { usePhotoLibrary } from "@/backend/photo-library-context";
 import FullScreenImagePreview from "@/pages/image-gallery/components/full-screen-image-preview";
 import Navigator from "@/pages/image-gallery/components/navigator";
 import StackPreview from "@/pages/image-gallery/components/stack-preview";
-import { PhotoComponent } from "@/pages/photo-component";
+import { PhotoComponent } from "@/components/photo-component";
 import {
 	HeartIcon,
 	Layers2Icon,

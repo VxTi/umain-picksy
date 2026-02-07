@@ -100,7 +100,7 @@ export default function Navigator({
 				Click to select, Shift-click for multi-select ({selectedImages.length}{" "}
 				selected)
 			</p>
-			<div className="relative flex items-center gap-2 text-sm! *:px-2!">
+			<div className="relative flex items-center gap-2 text-sm!">
 				{loading && <Spinner />}
 				<ThemeToggle />
 				<FilterImagesByAuthor
@@ -296,7 +296,7 @@ function OnlineUsersStatus({
 	return (
 		<Button
 			variant="outline"
-			className="h-8"
+			className="h-8 px-1.5!"
 			onMouseEnter={() => setShowPeers(true)}
 			onMouseLeave={() => {
 				if (!pinnedPeers) {

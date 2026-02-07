@@ -1,6 +1,6 @@
 import { Photo } from "@/backend/schemas";
 import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
-import { PhotoComponent } from "@/pages/photo-component";
+import { PhotoComponent } from "@/components/photo-component";
 import { XIcon } from "lucide-react";
 import React from "react";
 

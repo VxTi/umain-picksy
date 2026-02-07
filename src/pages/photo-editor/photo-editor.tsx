@@ -10,8 +10,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
-import PhotoEditorSidebar from "../components/photo-editor-sidebar";
-import { PhotoComponent } from "./photo-component";
+import PhotoEditorSidebar from "../../components/photo-editor-sidebar";
+import { PhotoComponent } from "../../components/photo-component";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 function PhotoEditor() {
