@@ -59,6 +59,8 @@
   --sidebar-ring: oklch(0.65 0.05 250);
 }
 
+input,
+button {
   border-radius: 8px;
   border: 1px solid var(--border);
   padding: 0.6em 1.2em;
