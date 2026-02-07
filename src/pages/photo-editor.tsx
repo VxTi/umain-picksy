@@ -1,6 +1,6 @@
-import { usePhotoLibrary } from "@/backend/photo-library-context";
-import { Photo } from "@/backend/schemas";
-import { EventType } from "@/lib/events";
+import { usePhotoLibrary }    from "@/backend/photo-library-context";
+import { Photo, PhotoConfig } from '@/backend/schemas';
+import { EventType }          from "@/lib/events";
 import { SaveIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -14,7 +14,6 @@ import { PhotoComponent } from "./photo-component";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 function PhotoEditor() {
-	const { saveImageConfig } = usePhotoLibrary();
 	const navigate = useNavigate();
 
 	const [editingPhotos, setEditingPhotos] = useState<Readonly<Photo[]>>([]);
@@ -33,14 +32,7 @@ function PhotoEditor() {
 
 	const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-	const handleSave = async () => {
-		for (const photo of editingPhotos) {
-			await saveImageConfig(photo.id, photo.config ?? {});
-		}
-		toast.info("Images saved successfully");
-	};
-
-	const onConfigChange = (config: any) => {
+	const onConfigChange = (config: PhotoConfig) => {
 		setEditingPhotos((prev) =>
 			prev.map((photo, i) =>
 				i === activeImageIndex ? { ...photo, config } : photo,
@@ -83,14 +75,7 @@ function PhotoEditor() {
 								))}
 							</div>
 						)}
-						<button
-							onMouseDown={(e) => e.stopPropagation()}
-							onClick={handleSave}
-							className="flex items-center gap-1 rounded-full py-1! font-semibold shadow-lg transition-all text-white! bg-blue-400! hover:bg-blue-100 border border-blue-400"
-						>
-							<SaveIcon className="size-4" />
-							<span className="text-white!"> Save edits</span>
-						</button>
+						<SaveEditsButton editingPhotos={editingPhotos} />
 						{!hasEditablePhotos && (
 							<ButtonWithTooltip
 								variant="outline"
@@ -147,6 +132,29 @@ function PhotoEditor() {
 			</div>
 		</main>
 	);
+}
+
+function SaveEditsButton({ editingPhotos}: { editingPhotos: Readonly<Photo[]> }) {
+
+	const { saveImageConfig } = usePhotoLibrary();
+
+	const handleSave = async () => {
+		for (const photo of editingPhotos) {
+			await saveImageConfig(photo.id, photo.config ?? {});
+		}
+		toast.info("Images saved successfully");
+	};
+
+	return (
+		<button
+			onMouseDown={(e) => e.stopPropagation()}
+			onClick={handleSave}
+			className="flex items-center gap-1 rounded-full py-1! font-semibold shadow-lg transition-all text-white! bg-blue-400! hover:bg-blue-100 border border-blue-400"
+		>
+			<SaveIcon className="size-4" />
+			<span className="text-white!"> Save edits</span>
+		</button>
+	)
 }
 
 export default PhotoEditor;

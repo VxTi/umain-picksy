@@ -14,20 +14,20 @@ import {
 	EyeOffIcon,
 	MaximizeIcon,
 	ScissorsIcon,
-} from "lucide-react";
-import { FilterOption, PhotoConfig } from "@/backend/schemas";
-import { Button } from "@/components/ui/button";
+}                                                from "lucide-react";
+import { FilterOption, FilterType, PhotoConfig } from '@/backend/schemas';
+import { Button }                                from "@/components/ui/button";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
-import { useMemo, useRef } from "react";
-import { cn } from "@/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDrag, useDrop } from "react-dnd";
+}                                            from "@/components/ui/select";
+import React, { useMemo, useRef, useEffect } from "react";
+import { cn }                                from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger }    from "@/components/ui/tabs";
+import { createSwapy, SlotItemMapArray, SwapEndEvent } from 'swapy';
 
 type Props = {
 	config: PhotoConfig;
@@ -37,7 +37,7 @@ type Props = {
 const FILTER_TYPES: {
 	type: FilterOption["type"];
 	label: string;
-	icon: any;
+	icon: React.FC<React.ComponentProps<'svg'>>;
 	min: number;
 	max: number;
 	step: number;
@@ -135,13 +135,9 @@ const FILTER_TYPES: {
 		defaultValue: 100,
 	},
 ];
-
-const ITEM_TYPE = "FILTER";
-
 interface DraggableFilterProps {
 	filter: FilterOption & { id: string };
 	index: number;
-	moveFilter: (dragIndex: number, hoverIndex: number) => void;
 	removeFilter: (index: number) => void;
 	updateFilterValue: (index: number, value: number) => void;
 }
@@ -149,94 +145,96 @@ interface DraggableFilterProps {
 function DraggableFilter({
 	filter,
 	index,
-	moveFilter,
 	removeFilter,
 	updateFilterValue,
 }: DraggableFilterProps) {
-	const ref = useRef<HTMLDivElement>(null);
-
-	const [{ isDragging }, drag] = useDrag({
-		type: ITEM_TYPE,
-		item: { index },
-		collect: (monitor) => ({
-			isDragging: monitor.isDragging(),
-		}),
-	});
-
-	const [, drop] = useDrop({
-		accept: ITEM_TYPE,
-		hover: (item: { index: number }, monitor) => {
-			if (!ref.current) return;
-			const dragIndex = item.index;
-			const hoverIndex = index;
-
-			if (dragIndex === hoverIndex) return;
-
-			const hoverBoundingRect = ref.current?.getBoundingClientRect();
-			const hoverMiddleY =
-				(hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-			const clientOffset = monitor.getClientOffset();
-			const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
-
-			if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
-			if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
-
-			moveFilter(dragIndex, hoverIndex);
-			item.index = hoverIndex;
-		},
-	});
-
-	drag(drop(ref));
-
 	const filterType = FILTER_TYPES.find((f) => f.type === filter.type);
 	if (!filterType) return null;
 	const Icon = filterType.icon;
 
 	return (
 		<div
-			ref={ref}
-			className={cn(
-				"space-y-3 p-3 rounded-lg border bg-card transition-colors",
-				isDragging && "opacity-50 border-primary",
-			)}
+			data-swapy-slot={filter.id}
+			className="rounded-lg border bg-muted/30 p-1"
 		>
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-2">
-					<GripVerticalIcon className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
-					<Icon className="size-4" />
-					<span className="text-sm font-medium">{filterType.label}</span>
+			<div
+				data-swapy-item={filter.id}
+				className={cn(
+					"space-y-3 p-3 rounded-lg border bg-card transition-colors shadow-sm",
+				)}
+			>
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						<div data-swapy-handle className="cursor-grab active:cursor-grabbing">
+							<GripVerticalIcon className="size-4 text-muted-foreground" />
+						</div>
+						<Icon className="size-4" />
+						<span className="text-sm font-medium">{filterType.label}</span>
+					</div>
+					<Button
+						variant="ghost"
+						size="icon-xs"
+						onClick={() => removeFilter(index)}
+					>
+						<Trash2Icon className="size-3" />
+					</Button>
 				</div>
-				<Button
-					variant="ghost"
-					size="icon-xs"
-					onClick={() => removeFilter(index)}
-				>
-					<Trash2Icon className="size-3" />
-				</Button>
-			</div>
 
-			<div className="space-y-2">
-				<div className="text-xs text-muted-foreground flex justify-between">
-					<span>Value</span>
-					<span>
-						{filter.value}
-						{filterType.unit}
-					</span>
+				<div className="space-y-2">
+					<div className="text-xs text-muted-foreground flex justify-between">
+						<span>Value</span>
+						<span>
+							{filter.value}
+							{filterType.unit}
+						</span>
+					</div>
+					<Slider
+						value={[filter.value]}
+						onValueChange={(v) => updateFilterValue(index, v[0])}
+						min={filterType.min}
+						max={filterType.max}
+						step={filterType.step}
+					/>
 				</div>
-				<Slider
-					value={[filter.value]}
-					onValueChange={(v) => updateFilterValue(index, v[0])}
-					min={filterType.min}
-					max={filterType.max}
-					step={filterType.step}
-				/>
 			</div>
 		</div>
 	);
 }
 
 export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
-	const addFilter = (type: FilterOption["type"]) => {
+	const swapyRef = useRef<any>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
+
+	const filters = useMemo(
+		() =>
+			(config.filters ?? []).map((f) => ({
+				...f,
+				id: f.id ?? Math.random().toString(36).substring(7),
+			})),
+		[config.filters],
+	);
+
+	useEffect(() => {
+		if (containerRef.current) {
+			swapyRef.current = createSwapy(containerRef.current);
+			swapyRef.current.onSwapEnd((event: SwapEndEvent) => {
+				const { slotItemMap } = event;
+				const newOrder = slotItemMap.asArray.map((m: SlotItemMapArray[number]) => m.item);
+
+				const reorderedFilters = [...filters].sort((a, b) => {
+					return newOrder.indexOf(a.id) - newOrder.indexOf(b.id);
+				});
+
+				onConfigChange({ ...config, filters: reorderedFilters });
+			});
+		}
+
+		return () => {
+			swapyRef.current?.destroy();
+		};
+	}, [filters, config, onConfigChange]);
+
+	const addFilter = (type: FilterType) => {
 		const filterType = FILTER_TYPES.find((f) => f.type === type);
 		if (!filterType) return;
 
@@ -282,21 +280,6 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 		});
 	};
 
-	const moveFilter = (dragIndex: number, hoverIndex: number) => {
-		const newFilters = [...filters];
-		const item = newFilters.splice(dragIndex, 1)[0];
-		newFilters.splice(hoverIndex, 0, item);
-		onConfigChange({ ...config, filters: newFilters });
-	};
-
-	const filters = useMemo(
-		() =>
-			(config.filters ?? []).map((f) => ({
-				...f,
-				id: f.id ?? Math.random().toString(36).substring(7),
-			})),
-		[config.filters],
-	);
 	const transform = config.transform ?? {
 		rotate: 0,
 		scale: 1,
@@ -325,7 +308,7 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 					>
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-semibold">Filters</h3>
-							<Select onValueChange={(value) => addFilter(value as any)}>
+							<Select onValueChange={(value) => addFilter(value as FilterType)}>
 								<SelectTrigger className="min-w-30">
 									<PlusIcon className="mr-2 h-4 w-4" />
 									<SelectValue placeholder="Add" />
@@ -343,13 +326,12 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 							</Select>
 						</div>
 
-						<div className="space-y-4">
+						<div className="space-y-4" ref={containerRef}>
 							{filters.map((filter, index) => (
 								<DraggableFilter
 									key={filter.id}
 									filter={filter}
 									index={index}
-									moveFilter={moveFilter}
 									removeFilter={removeFilter}
 									updateFilterValue={updateFilterValue}
 								/>
