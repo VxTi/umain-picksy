@@ -54,6 +54,7 @@ export function PhotoComponent({
 					`skewX(${config.transform.skewX}deg)`,
 				config.transform.skewY !== undefined &&
 					`skewY(${config.transform.skewY}deg)`,
+				`translateX(${config.transform.translateX ?? 0}%) translateY(${config.transform.translateY ?? 0}%)`,
 			]
 				.filter(Boolean)
 				.join(" ")
@@ -62,7 +63,7 @@ export function PhotoComponent({
 	return (
 		<div
 			className={twMerge(
-				"overflow-hidden  size-full flex items-center justify-center",
+				"overflow-hidden  size-full flex items-center justify-center border-dashed border-border border-2 rounded-sm",
 				className,
 			)}
 			{...props}

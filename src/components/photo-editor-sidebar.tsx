@@ -296,6 +296,8 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 					scale: 1,
 					skewX: 0,
 					skewY: 0,
+					translateX: 0,
+					translateY: 0,
 				}),
 				[key]: value,
 			},
@@ -307,6 +309,8 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 		scale: 1,
 		skewX: 0,
 		skewY: 0,
+		translateX: 0,
+		translateY: 0,
 	};
 
 	return (
@@ -441,6 +445,41 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 								<Slider
 									value={[transform.skewY ?? 0]}
 									onValueChange={(v) => updateTransform("skewY", v[0])}
+									min={-45}
+									max={45}
+									step={1}
+								/>
+							</div>
+
+							<div className="space-y-3">
+								<div className="flex items-center gap-2">
+									<ScissorsIcon className="size-4" />
+									<span className="text-sm font-medium">Translate X</span>
+								</div>
+								<div className="text-xs text-muted-foreground flex justify-between">
+									<span>Angle</span>
+									<span>{transform.translateX ?? 0}°</span>
+								</div>
+								<Slider
+									value={[transform.translateX ?? 0]}
+									onValueChange={(v) => updateTransform("translateX", v[0])}
+									min={-45}
+									max={45}
+									step={1}
+								/>
+							</div>
+							<div className="space-y-3">
+								<div className="flex items-center gap-2">
+									<ScissorsIcon className="size-4" />
+									<span className="text-sm font-medium">Translate Y</span>
+								</div>
+								<div className="text-xs text-muted-foreground flex justify-between">
+									<span>Angle</span>
+									<span>{transform.translateY ?? 0}°</span>
+								</div>
+								<Slider
+									value={[transform.translateY ?? 0]}
+									onValueChange={(v) => updateTransform("translateY", v[0])}
 									min={-45}
 									max={45}
 									step={1}

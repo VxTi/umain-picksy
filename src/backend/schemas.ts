@@ -58,6 +58,8 @@ export const PhotoConfig = Schema.Struct({
 			scale: Schema.optional(Schema.Number),
 			skewX: Schema.optional(Schema.Number),
 			skewY: Schema.optional(Schema.Number),
+			translateX: Schema.optional(Schema.Number),
+			translateY: Schema.optional(Schema.Number),
 		}),
 	),
 });
