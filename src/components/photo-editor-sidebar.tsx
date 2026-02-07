@@ -24,9 +24,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useState, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useDrag, useDrop } from "react-dnd";
 
 type Props = {
 	config: PhotoConfig;
@@ -135,9 +136,106 @@ const FILTER_TYPES: {
 	},
 ];
 
-export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
-	const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+const ITEM_TYPE = "FILTER";
 
+interface DraggableFilterProps {
+	filter: FilterOption & { id: string };
+	index: number;
+	moveFilter: (dragIndex: number, hoverIndex: number) => void;
+	removeFilter: (index: number) => void;
+	updateFilterValue: (index: number, value: number) => void;
+}
+
+function DraggableFilter({
+	filter,
+	index,
+	moveFilter,
+	removeFilter,
+	updateFilterValue,
+}: DraggableFilterProps) {
+	const ref = useRef<HTMLDivElement>(null);
+
+	const [{ isDragging }, drag] = useDrag({
+		type: ITEM_TYPE,
+		item: { index },
+		collect: (monitor) => ({
+			isDragging: monitor.isDragging(),
+		}),
+	});
+
+	const [, drop] = useDrop({
+		accept: ITEM_TYPE,
+		hover: (item: { index: number }, monitor) => {
+			if (!ref.current) return;
+			const dragIndex = item.index;
+			const hoverIndex = index;
+
+			if (dragIndex === hoverIndex) return;
+
+			const hoverBoundingRect = ref.current?.getBoundingClientRect();
+			const hoverMiddleY =
+				(hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+			const clientOffset = monitor.getClientOffset();
+			const hoverClientY = clientOffset!.y - hoverBoundingRect.top;
+
+			if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) return;
+			if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) return;
+
+			moveFilter(dragIndex, hoverIndex);
+			item.index = hoverIndex;
+		},
+	});
+
+	drag(drop(ref));
+
+	const filterType = FILTER_TYPES.find((f) => f.type === filter.type);
+	if (!filterType) return null;
+	const Icon = filterType.icon;
+
+	return (
+		<div
+			ref={ref}
+			className={cn(
+				"space-y-3 p-3 rounded-lg border bg-card transition-colors",
+				isDragging && "opacity-50 border-primary",
+			)}
+		>
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					<GripVerticalIcon className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
+					<Icon className="size-4" />
+					<span className="text-sm font-medium">{filterType.label}</span>
+				</div>
+				<Button
+					variant="ghost"
+					size="icon-xs"
+					onClick={() => removeFilter(index)}
+				>
+					<Trash2Icon className="size-3" />
+				</Button>
+			</div>
+
+			<div className="space-y-2">
+				<div className="text-xs text-muted-foreground flex justify-between">
+					<span>Value</span>
+					<span>
+						{filter.value}
+						{filterType.unit}
+					</span>
+				</div>
+				<Slider
+					value={[filter.value]}
+					onValueChange={(v) => updateFilterValue(index, v[0])}
+					min={filterType.min}
+					max={filterType.max}
+					step={filterType.step}
+				/>
+			</div>
+		</div>
+	);
+}
+
+export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 	const addFilter = (type: FilterOption["type"]) => {
 		const filterType = FILTER_TYPES.find((f) => f.type === type);
 		if (!filterType) return;
@@ -145,7 +243,14 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 		const currentFilters = config.filters ?? [];
 		onConfigChange({
 			...config,
-			filters: [...currentFilters, { type, value: filterType.defaultValue }],
+			filters: [
+				...currentFilters,
+				{
+					id: Math.random().toString(36).substring(7),
+					type,
+					value: filterType.defaultValue,
+				},
+			],
 		});
 	};
 
@@ -177,28 +282,21 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 		});
 	};
 
-	const handleDragStart = (e: React.DragEvent, index: number) => {
-		setDraggedIndex(index);
-		e.dataTransfer.effectAllowed = "move";
-	};
-
-	const handleDragOver = (e: React.DragEvent, index: number) => {
-		e.preventDefault();
-		e.dataTransfer.dropEffect = "move";
-		if (draggedIndex === null || draggedIndex === index) return;
-
-		const newFilters = [...(config.filters ?? [])];
-		const item = newFilters.splice(draggedIndex, 1)[0];
-		newFilters.splice(index, 0, item);
+	const moveFilter = (dragIndex: number, hoverIndex: number) => {
+		const newFilters = [...filters];
+		const item = newFilters.splice(dragIndex, 1)[0];
+		newFilters.splice(hoverIndex, 0, item);
 		onConfigChange({ ...config, filters: newFilters });
-		setDraggedIndex(index);
 	};
 
-	const handleDragEnd = () => {
-		setDraggedIndex(null);
-	};
-
-	const filters = config.filters ?? [];
+	const filters = useMemo(
+		() =>
+			(config.filters ?? []).map((f) => ({
+				...f,
+				id: f.id ?? Math.random().toString(36).substring(7),
+			})),
+		[config.filters],
+	);
 	const transform = config.transform ?? {
 		rotate: 0,
 		scale: 1,
@@ -246,61 +344,16 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 						</div>
 
 						<div className="space-y-4">
-							{filters.map((filter, index) => {
-								const filterType = FILTER_TYPES.find(
-									(f) => f.type === filter.type,
-								);
-								if (!filterType) return null;
-								const Icon = filterType.icon;
-
-								return (
-									<div
-										key={`${filter.type}-${index}`}
-										draggable
-										onDragStart={(e) => handleDragStart(e, index)}
-										onDragOver={(e) => handleDragOver(e, index)}
-										onDragEnd={handleDragEnd}
-										className={cn(
-											"space-y-3 p-3 rounded-lg border bg-card transition-colors",
-											draggedIndex === index && "opacity-50 border-primary",
-										)}
-									>
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<GripVerticalIcon className="size-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
-												<Icon className="size-4" />
-												<span className="text-sm font-medium">
-													{filterType.label}
-												</span>
-											</div>
-											<Button
-												variant="ghost"
-												size="icon-xs"
-												onClick={() => removeFilter(index)}
-											>
-												<Trash2Icon className="size-3" />
-											</Button>
-										</div>
-
-										<div className="space-y-2">
-											<div className="text-xs text-muted-foreground flex justify-between">
-												<span>Value</span>
-												<span>
-													{filter.value}
-													{filterType.unit}
-												</span>
-											</div>
-											<Slider
-												value={[filter.value]}
-												onValueChange={(v) => updateFilterValue(index, v[0])}
-												min={filterType.min}
-												max={filterType.max}
-												step={filterType.step}
-											/>
-										</div>
-									</div>
-								);
-							})}
+							{filters.map((filter, index) => (
+								<DraggableFilter
+									key={filter.id}
+									filter={filter}
+									index={index}
+									moveFilter={moveFilter}
+									removeFilter={removeFilter}
+									updateFilterValue={updateFilterValue}
+								/>
+							))}
 
 							{filters.length === 0 && (
 								<div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">

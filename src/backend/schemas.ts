@@ -42,7 +42,14 @@ export const FilterOption = Schema.Union(
 export type FilterOption = Schema.Schema.Type<typeof FilterOption>;
 
 export const PhotoConfig = Schema.Struct({
-	filters: Schema.optional(Schema.Array(FilterOption)),
+	filters: Schema.optional(
+		Schema.Array(
+			Schema.extend(
+				FilterOption,
+				Schema.Struct({ id: Schema.optional(Schema.String) }),
+			),
+		),
+	),
 	transform: Schema.optional(
 		Schema.Struct({
 			rotate: Schema.optional(Schema.Number),
