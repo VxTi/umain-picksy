@@ -194,6 +194,7 @@ function PhotoActions({
 	photo: Photo;
 	onDelete?: () => void;
 }) {
+	const [isFavorite, setIsFavorite] = useState(photo.favorite);
 	const { setPhotoFavorite, removePhotoFromLibrary } = usePhotoLibrary();
 	return (
 		<div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
@@ -203,29 +204,37 @@ function PhotoActions({
 				transition={{ delay: 0.3 }}
 				className="flex items-center gap-4"
 			>
-				<div className="flex items-center gap-1 rounded-full p-2 bg-black/40 border border-white/10 shadow-2xl backdrop-blur-2xl">
+				<div className="flex items-center gap-1 rounded-full p-2 bg-background/40 border border-border/10 shadow-2xl backdrop-blur-2xl">
 					<ButtonWithTooltip
 						variant="ghost"
 						size="icon-sm"
-						tooltip={
-							photo.favorite ? "Remove from favorites" : "Add to favorites"
+						tooltip={isFavorite ? "Remove from favorites" : "Add to favorites"}
+						className={
+							"border-transparent! hover:bg-accent/10 text-accent-foreground bg-transparent!"
 						}
-						className={twMerge(
-							"border-transparent! hover:bg-white/10 text-white/80 hover:text-white bg-transparent!",
-							photo.favorite && "text-red-500 hover:text-red-600",
-						)}
-						onClick={async (e) => {
+						onClick={(e) => {
 							e.stopPropagation();
-							await setPhotoFavorite(photo.id, !photo.favorite);
+							setIsFavorite((fav) => {
+								void setPhotoFavorite(photo.id, !fav);
+
+								return !fav;
+							});
 						}}
 					>
-						<HeartIcon className={photo.favorite ? "fill-current" : ""} />
+						<HeartIcon
+							className={twMerge(
+								"size-5 transition-all duration-100",
+								isFavorite
+									? "fill-red-500 hover:text-red-600 stroke-red-500"
+									: "fill-none",
+							)}
+						/>
 					</ButtonWithTooltip>
 					<ButtonWithTooltip
 						variant="ghost"
 						size="icon-sm"
 						tooltip="Edit image"
-						className="border-transparent! hover:bg-white/10 text-white/80 hover:text-white bg-transparent!"
+						className="border-transparent! hover:bg-accent/10 text-accent-foreground bg-transparent!"
 						onClick={(e) => {
 							e.stopPropagation();
 							void openEditWindow([photo]);
@@ -233,12 +242,12 @@ function PhotoActions({
 					>
 						<PencilIcon />
 					</ButtonWithTooltip>
-					<div className="w-px h-4 bg-white/20 mx-1" />
+					<div className="w-px h-4 bg-foreground/20 mx-1" />
 					<ButtonWithTooltip
 						variant="ghost"
 						size="icon-sm"
 						tooltip="Delete image"
-						className="border-transparent! text-white/70 hover:text-red-500 hover:bg-white/10 bg-transparent!"
+						className="border-transparent! text-accent-foreground/70 hover:text-red-500 hover:bg-accent/10 bg-transparent!"
 						onClick={async (e) => {
 							e.stopPropagation();
 							if (confirm("Are you sure you want to delete this image?")) {
