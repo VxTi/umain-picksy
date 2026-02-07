@@ -11,7 +11,7 @@ const EmptySchema = Schema.NullOr(Schema.Struct({}));
 
 const SavePhotoConfigArgsSchema = Schema.Struct({
 	id: Schema.String,
-	config: PhotoConfig,
+	config: Schema.String,
 });
 
 const AddPhotosFromFolderArgsSchema = EmptySchema;

@@ -15,8 +15,35 @@ export function PhotoComponent({
 	className,
 	...props
 }: ImageViewProps) {
-	const { brightness, saturation, blur } = config;
-	const filter = `brightness(${brightness ?? 100}%) saturate(${saturation ?? 50}%) blur(${blur ?? 0}px)`;
+	const filter = Array.isArray(config)
+		? config
+				.map((opt) => {
+					switch (opt.type) {
+						case "brightness":
+							return `brightness(${opt.value}%)`;
+						case "saturate":
+							return `saturate(${opt.value}%)`;
+						case "blur":
+							return `blur(${opt.value}px) `;
+						case "contrast":
+							return `contrast(${opt.value}%)`;
+						case "sepia":
+							return `sepia(${opt.value}%)`;
+						case "grayscale":
+							return `grayscale(${opt.value}%)`;
+						case "hue-rotate":
+							return `hue-rotate(${opt.value}deg)`;
+						case "invert":
+							return `invert(${opt.value}%)`;
+						case "opacity":
+							return `opacity(${opt.value}%)`;
+						default:
+							return "";
+					}
+				})
+				.join(" ")
+		: "";
+
 	return (
 		<div
 			className={twMerge(

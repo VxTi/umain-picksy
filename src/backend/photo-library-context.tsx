@@ -111,7 +111,12 @@ export function PhotoLibraryProvider({
 	const saveImageConfig = useCallbackEffect(
 		(id: string, config: PhotoConfig) =>
 			Effect.sync(() => setLoading(true)).pipe(
-				Effect.zipRight(invoke(CommandType.SAVE_PHOTO_CONFIG, { id, config })),
+				Effect.zipRight(
+					invoke(CommandType.SAVE_PHOTO_CONFIG, {
+						id,
+						config: JSON.stringify(config),
+					}),
+				),
 				Effect.ensuring(Effect.sync(() => setLoading(false))),
 			),
 		[],

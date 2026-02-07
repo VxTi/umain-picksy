@@ -30,10 +30,13 @@ pub struct ImageMetadata {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PhotoConfig {
-    pub brightness: f64,
-    pub saturation: f64,
-    pub blur: f64,
+#[serde(transparent)]
+pub struct PhotoConfig(pub String);
+
+impl From<String> for PhotoConfig {
+    fn from(s: String) -> Self {
+        PhotoConfig(s)
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

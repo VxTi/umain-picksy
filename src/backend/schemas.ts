@@ -1,10 +1,47 @@
 import { Schema } from "effect";
 
-export const PhotoConfig = Schema.Struct({
-	brightness: Schema.optional(Schema.Number),
-	saturation: Schema.optional(Schema.Number),
-	blur: Schema.optional(Schema.Number),
-});
+export const FilterOption = Schema.Union(
+	Schema.Struct({
+		type: Schema.Literal("brightness"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("saturate"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("blur"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("contrast"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("sepia"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("grayscale"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("hue-rotate"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("invert"),
+		value: Schema.Number,
+	}),
+	Schema.Struct({
+		type: Schema.Literal("opacity"),
+		value: Schema.Number,
+	}),
+);
+
+export type FilterOption = Schema.Schema.Type<typeof FilterOption>;
+
+export const PhotoConfig = Schema.Array(FilterOption);
 
 export const PhotoSchema = Schema.Struct({
 	base64: Schema.String,

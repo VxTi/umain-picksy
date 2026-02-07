@@ -34,42 +34,14 @@ function PhotoEditor() {
 
 	const handleSave = async () => {
 		for (const photo of editingPhotos) {
-			await saveImageConfig(photo.id, {
-				brightness: photo.config?.brightness ?? 100,
-				saturation: photo.config?.saturation ?? 100,
-				blur: photo.config?.blur ?? 0,
-			});
+			await saveImageConfig(photo.id, photo.config ?? []);
 		}
 		toast.info("Images saved successfully");
 	};
 
-	const onBrightnessChange = (brightness: number) => {
+	const onConfigChange = (config: PhotoConfig) => {
 		setEditingPhotos((prev) =>
-			prev.map((photo, i) =>
-				i === activeImageIndex
-					? { ...photo, config: { ...photo.config, brightness } }
-					: photo,
-			),
-		);
-	};
-
-	const onSaturationChange = (saturation: number) => {
-		setEditingPhotos((prev) =>
-			prev.map((photo, i) =>
-				i === activeImageIndex
-					? { ...photo, config: { ...photo.config, saturation } }
-					: photo,
-			),
-		);
-	};
-
-	const onBlurChange = (blur: number) => {
-		setEditingPhotos((prev) =>
-			prev.map((photo, i) =>
-				i === activeImageIndex
-					? { ...photo, config: { ...photo.config, blur } }
-					: photo,
-			),
+			prev.map((photo, i) => (i === activeImageIndex ? { ...photo, config } : photo)),
 		);
 	};
 
@@ -166,16 +138,8 @@ function PhotoEditor() {
 				</div>
 
 				<PhotoEditorSidebar
-					brightness={
-						editingPhotos[activeImageIndex]?.config?.brightness ?? 100
-					}
-					saturation={
-						editingPhotos[activeImageIndex]?.config?.saturation ?? 100
-					}
-					blur={editingPhotos[activeImageIndex]?.config?.blur ?? 0}
-					onBrightnessChange={onBrightnessChange}
-					onSaturationChange={onSaturationChange}
-					onBlurChange={onBlurChange}
+					config={editingPhotos[activeImageIndex]?.config ?? []}
+					onConfigChange={onConfigChange}
 				/>
 			</div>
 		</main>
