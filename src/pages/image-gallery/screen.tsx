@@ -15,6 +15,7 @@ import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
+import { AnimatePresence } from "framer-motion";
 
 export default function ImageGallery() {
 	const { photos, setPhotoStack, clearPhotoStack, getFullResAttachment } =
@@ -308,11 +309,15 @@ export default function ImageGallery() {
 					</div>
 				</div>
 			</div>
-			<FullScreenImagePreview
-				fullScreenPhoto={fullScreenPhoto}
-				setFullScreenPhoto={setFullScreenPhoto}
-				fullScreenSrc={fullScreenSrc}
-			/>
+			<AnimatePresence>
+				{fullScreenPhoto && (
+					<FullScreenImagePreview
+						fullScreenPhoto={fullScreenPhoto}
+						setFullScreenPhoto={setFullScreenPhoto}
+						fullScreenSrc={fullScreenSrc}
+					/>
+				)}
+			</AnimatePresence>
 			<StackPreview
 				openStackId={openStackId}
 				setOpenStackId={setOpenStackId}
