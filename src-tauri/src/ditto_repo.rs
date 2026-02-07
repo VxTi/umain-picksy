@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Emitter, Manager};
 use base64::{engine::general_purpose, Engine as _};
+use image::GenericImageView;
 
 const STATE_COLLECTION: &str = "app_state";
 const STATE_DOC_ID: &str = "root";
@@ -930,10 +931,8 @@ async fn create_full_res_attachment(
     store: &dittolive_ditto::store::Store,
     image_path: &str,
 ) -> Result<Option<DittoAttachment>, String> {
+    println!("Creating full res attachment for {}", image_path);
     let metadata = std::fs::metadata(image_path).map_err(|e| e.to_string())?;
-    if metadata.len() > FULL_RES_ATTACHMENT_MAX_BYTES {
-        return Ok(None);
-    }
 
     let mut user_data = std::collections::HashMap::new();
     if let Some(name) = std::path::Path::new(image_path)
@@ -947,11 +946,66 @@ async fn create_full_res_attachment(
         user_data.insert("mime_type".to_string(), mime_type);
     }
 
+    if metadata.len() > FULL_RES_ATTACHMENT_MAX_BYTES {
+        println!("Resizing image to 2MB for {}", image_path);
+        let img = image::open(image_path).map_err(|e| e.to_string())?;
+        let (jpeg_bytes, mime_type) =
+            encode_full_res_under_limit(&img, FULL_RES_ATTACHMENT_MAX_BYTES)?;
+        user_data.insert("mime_type".to_string(), mime_type.to_string());
+        let attachment = store
+            .new_attachment_from_bytes(&jpeg_bytes, user_data)
+            .await
+            .map_err(|e| e.to_string())?;
+        return Ok(Some(attachment));
+    }
+
+    println!("Creating full res attachment for {}", image_path);
     let attachment = store
         .new_attachment(image_path, user_data)
         .await
         .map_err(|e| e.to_string())?;
     Ok(Some(attachment))
+}
+
+fn encode_full_res_under_limit(
+    img: &image::DynamicImage,
+    max_bytes: u64,
+) -> Result<(Vec<u8>, &'static str), String> {
+    let mut quality: u8 = 90;
+    let mut scale: f32 = 1.0;
+    let max_bytes = max_bytes as usize;
+
+    for _attempt in 0..12 {
+        let resized = if (scale - 1.0).abs() < f32::EPSILON {
+            img.clone()
+        } else {
+            let (w, h) = img.dimensions();
+            let target_w = (w as f32 * scale).max(1.0) as u32;
+            let target_h = (h as f32 * scale).max(1.0) as u32;
+            img.resize(target_w, target_h, image::imageops::FilterType::Lanczos3)
+        };
+
+        let mut bytes = Vec::new();
+        let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(
+            &mut bytes,
+            quality,
+        );
+        encoder
+            .encode_image(&resized)
+            .map_err(|e| e.to_string())?;
+
+        if bytes.len() <= max_bytes {
+            return Ok((bytes, "image/jpeg"));
+        }
+
+        if quality > 50 {
+            quality = quality.saturating_sub(15);
+        } else {
+            scale *= 0.85;
+        }
+    }
+
+    Err("Failed to compress image under 2MB".to_string())
 }
 
 fn guess_mime_type(path: &str) -> Option<String> {
