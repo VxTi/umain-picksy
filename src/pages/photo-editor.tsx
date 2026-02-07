@@ -41,7 +41,9 @@ function PhotoEditor() {
 
 	const onConfigChange = (config: PhotoConfig) => {
 		setEditingPhotos((prev) =>
-			prev.map((photo, i) => (i === activeImageIndex ? { ...photo, config } : photo)),
+			prev.map((photo, i) =>
+				i === activeImageIndex ? { ...photo, config } : photo,
+			),
 		);
 	};
 
