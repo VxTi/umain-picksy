@@ -456,7 +456,7 @@ function GalleryNavigationBar({
 	onCreateStack: () => void;
 	stackActionLabel: string;
 	showStackAction: boolean;
-	stackIcon: React.ComponentType<{ className?: string}>;
+	stackIcon: React.ComponentType<{ className?: string }>;
 }) {
 	const { photos, removePhotoFromLibrary, setPhotos, setPhotosFavorite } =
 		usePhotoLibrary();

@@ -236,6 +236,7 @@ fn process_image_file(path: String) -> Result<Photo, String> {
             .unwrap_or_else(|| path.clone()),
         image_path: path,
         base64: base64_content,
+        full_res_attachment: None,
         config: None,
         favorite: false,
         stack_id: None,

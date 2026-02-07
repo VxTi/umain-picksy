@@ -10,6 +10,7 @@ use dittolive_ditto::identity;
 use dittolive_ditto::prelude::*;
 use dittolive_ditto::transport::Peer;
 use dittolive_ditto::store::StoreObserver;
+use dittolive_ditto::store::attachment::{DittoAttachment, DittoAttachmentToken};
 use serde::{Deserialize, Serialize};
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Emitter, Manager};
@@ -19,6 +20,7 @@ const STATE_DOC_ID: &str = "root";
 const PHOTOS_COLLECTION: &str = "photos";
 const SET_LIBRARY_EVENT: &str = "SetLibrary";
 const PRESENCE_EVENT: &str = "Presence";
+const FULL_RES_ATTACHMENT_MAX_BYTES: u64 = 2 * 1024 * 1024;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ImageMetadata {
@@ -46,6 +48,8 @@ pub struct Photo {
     pub image_path: String,
     pub filename: String,
     pub base64: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_res_attachment: Option<AttachmentTokenPayload>,
     pub config: Option<PhotoConfig>,
     #[serde(default)]
     pub favorite: bool,
@@ -76,12 +80,14 @@ struct StoredState {
     state: AppState,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PhotoDocument {
     _id: String,
     filename: String,
     image_path: String,
     base64: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    full_res_attachment: Option<DittoAttachmentToken>,
     #[serde(default)]
     author_peer_id: Option<String>,
     pub config: Option<PhotoConfig>,
@@ -90,6 +96,22 @@ struct PhotoDocument {
     #[serde(default)]
     pub stack_id: Option<String>,
     #[serde(default)]
+    pub is_stack_primary: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct PhotoDocumentWrite {
+    _id: String,
+    filename: String,
+    image_path: String,
+    base64: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    full_res_attachment: Option<DittoAttachment>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    author_peer_id: Option<String>,
+    pub config: Option<PhotoConfig>,
+    pub favorite: bool,
+    pub stack_id: Option<String>,
     pub is_stack_primary: bool,
 }
 
@@ -113,6 +135,8 @@ pub struct PhotoPayload {
     pub filename: String,
     pub image_path: String,
     pub base64: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub full_res_attachment: Option<AttachmentTokenPayload>,
     pub author_peer_id: Option<String>,
     pub config: Option<PhotoConfig>,
     pub favorite: bool,
@@ -124,6 +148,13 @@ pub struct PhotoPayload {
 #[derive(Clone, Debug, Serialize)]
 struct SetLibraryPayload {
     photos: Vec<PhotoPayload>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AttachmentTokenPayload {
+    pub id: String,
+    pub len: u64,
+    pub metadata: std::collections::HashMap<String, String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -670,11 +701,24 @@ async fn upsert_photos_from_paths_with_ditto(
             continue;
         }
 
-        let doc = PhotoDocument {
+        let full_res_attachment =
+            match create_full_res_attachment(&store, &image.image_path).await {
+                Ok(attachment) => attachment,
+                Err(error) => {
+                    eprintln!(
+                        "Failed to create full-res attachment for {}: {}",
+                        image.image_path, error
+                    );
+                    None
+                }
+            };
+
+        let doc = PhotoDocumentWrite {
             _id: doc_id.clone(),
             filename: filename.clone(),
             image_path: image.image_path.clone(),
             base64: image.base64.clone(),
+            full_res_attachment,
             author_peer_id: Some(author_peer_id.clone()),
             config: image.config.clone(),
             favorite: image.favorite,
@@ -726,7 +770,7 @@ async fn upsert_photos_from_paths_with_ditto(
                     payload.insert(key, serde_json::to_value(doc).map_err(|e| e.to_string())?);
                 }
                 let insert_query = format!(
-                    "INSERT INTO {PHOTOS_COLLECTION} DOCUMENTS {} ON ID CONFLICT DO UPDATE",
+                    "INSERT INTO COLLECTION {PHOTOS_COLLECTION} (full_res_attachment ATTACHMENT) DOCUMENTS {} ON ID CONFLICT DO UPDATE",
                     query_parts.join(", ")
                 );
                 store_for_task
@@ -801,6 +845,10 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
                 filename: doc.filename,
                 image_path: doc.image_path,
                 base64: doc.base64,
+                full_res_attachment: doc
+                    .full_res_attachment
+                    .as_ref()
+                    .map(attachment_token_to_payload),
                 author_peer_id: doc.author_peer_id,
                 config: doc.config,
                 favorite: doc.favorite,
@@ -809,4 +857,57 @@ fn collect_photo_payloads(query_result: &QueryResult) -> Vec<PhotoPayload> {
             }
         })
         .collect()
+}
+
+fn attachment_token_to_payload(token: &DittoAttachmentToken) -> AttachmentTokenPayload {
+    AttachmentTokenPayload {
+        id: token.id(),
+        len: token.len(),
+        metadata: token.metadata().clone(),
+    }
+}
+
+async fn create_full_res_attachment(
+    store: &dittolive_ditto::store::Store,
+    image_path: &str,
+) -> Result<Option<DittoAttachment>, String> {
+    let metadata = std::fs::metadata(image_path).map_err(|e| e.to_string())?;
+    if metadata.len() > FULL_RES_ATTACHMENT_MAX_BYTES {
+        return Ok(None);
+    }
+
+    let mut user_data = std::collections::HashMap::new();
+    if let Some(name) = std::path::Path::new(image_path)
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+    {
+        user_data.insert("name".to_string(), name);
+    }
+
+    if let Some(mime_type) = guess_mime_type(image_path) {
+        user_data.insert("mime_type".to_string(), mime_type);
+    }
+
+    let attachment = store
+        .new_attachment(image_path, user_data)
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(Some(attachment))
+}
+
+fn guess_mime_type(path: &str) -> Option<String> {
+    let ext = std::path::Path::new(path)
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_ascii_lowercase())?;
+    let mime = match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "tiff" | "tif" => "image/tiff",
+        "heic" => "image/heic",
+        _ => return None,
+    };
+    Some(mime.to_string())
 }
