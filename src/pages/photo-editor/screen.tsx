@@ -1,5 +1,6 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
 import type { Photo, PhotoConfig } from "@/backend/schemas";
+import ScreenWrapper from "@/components/screen-wrapper";
 import { EventType } from "@/lib/events";
 import Header from "@/pages/photo-editor/components/header";
 import { useState, useEffect } from "react";
@@ -66,7 +67,7 @@ export default function PhotoEditor() {
 	const hasEditablePhotos = editingPhotos.length > 0;
 
 	return (
-		<main className="h-screen bg-background flex flex-col overflow-hidden">
+		<ScreenWrapper>
 			<Header
 				editingPhotos={editingPhotos}
 				activeImageIndex={activeImageIndex}
@@ -113,6 +114,6 @@ export default function PhotoEditor() {
 					onConfigChange={onConfigChange}
 				/>
 			</div>
-		</main>
+		</ScreenWrapper>
 	);
 }

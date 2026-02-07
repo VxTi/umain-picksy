@@ -1,4 +1,5 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
+import ScreenWrapper from "@/components/screen-wrapper";
 import FullScreenImagePreview from "@/pages/image-gallery/components/full-screen-image-preview";
 import Navigator from "@/pages/image-gallery/components/navigator";
 import StackPreview from "@/pages/image-gallery/components/stack-preview";
@@ -280,7 +281,7 @@ export default function ImageGallery() {
 	}, [displayPhotos, filteredPhotoIds, selectedImages]);
 
 	return (
-		<main className="h-screen bg-background flex flex-col overflow-hidden">
+		<ScreenWrapper>
 			<div className="flex-1 overflow-y-auto">
 				<Navigator
 					selectedImages={selectedImages}
@@ -328,7 +329,7 @@ export default function ImageGallery() {
 					/>
 				)}
 			</AnimatePresence>
-		</main>
+		</ScreenWrapper>
 	);
 }
 
