@@ -1,3 +1,4 @@
+import SwirlyTopRightArrow from "@/components/swirly-top-right-arrow";
 import { Slider } from "@/components/ui/slider";
 import {
 	BlendIcon,
@@ -14,20 +15,20 @@ import {
 	EyeOffIcon,
 	MaximizeIcon,
 	ScissorsIcon,
-}                                                from "lucide-react";
-import { FilterOption, FilterType, PhotoConfig } from '@/backend/schemas';
-import { Button }                                from "@/components/ui/button";
+} from "lucide-react";
+import { FilterOption, FilterType, PhotoConfig } from "@/backend/schemas";
+import { Button } from "@/components/ui/button";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-}                                            from "@/components/ui/select";
+} from "@/components/ui/select";
 import React, { useMemo, useRef, useEffect } from "react";
-import { cn }                                from "@/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger }    from "@/components/ui/tabs";
-import { createSwapy, SlotItemMapArray, SwapEndEvent } from 'swapy';
+import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createSwapy, SlotItemMapArray, SwapEndEvent } from "swapy";
 
 type Props = {
 	config: PhotoConfig;
@@ -37,7 +38,7 @@ type Props = {
 const FILTER_TYPES: {
 	type: FilterOption["type"];
 	label: string;
-	icon: React.FC<React.ComponentProps<'svg'>>;
+	icon: React.FC<React.ComponentProps<"svg">>;
 	min: number;
 	max: number;
 	step: number;
@@ -165,7 +166,10 @@ function DraggableFilter({
 			>
 				<div className="flex items-center justify-between">
 					<div className="flex items-center gap-2">
-						<div data-swapy-handle className="cursor-grab active:cursor-grabbing">
+						<div
+							data-swapy-handle
+							className="cursor-grab active:cursor-grabbing"
+						>
 							<GripVerticalIcon className="size-4 text-muted-foreground" />
 						</div>
 						<Icon className="size-4" />
@@ -216,7 +220,9 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 		() =>
 			(config.filters ?? []).map((f) => ({
 				...f,
-				id: f.id ?? "temp-id-" + f.type + "-" + Math.random().toString(36).substring(7),
+				id:
+					f.id ??
+					"temp-id-" + f.type + "-" + Math.random().toString(36).substring(7),
 			})),
 		[config.filters],
 	);
@@ -226,7 +232,9 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 			swapyRef.current = createSwapy(containerRef.current);
 			swapyRef.current.onSwapEnd((event: SwapEndEvent) => {
 				const { slotItemMap } = event;
-				const newOrder = slotItemMap.asArray.map((m: SlotItemMapArray[number]) => m.item);
+				const newOrder = slotItemMap.asArray.map(
+					(m: SlotItemMapArray[number]) => m.item,
+				);
 
 				const currentConfig = configRef.current;
 				const currentFilters = [...(currentConfig.filters ?? [])];
@@ -236,7 +244,10 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 					return newOrder.indexOf(aId) - newOrder.indexOf(bId);
 				});
 
-				onConfigChangeRef.current({ ...currentConfig, filters: reorderedFilters });
+				onConfigChangeRef.current({
+					...currentConfig,
+					filters: reorderedFilters,
+				});
 			});
 		}
 
@@ -349,8 +360,9 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 							))}
 
 							{filters.length === 0 && (
-								<div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
-									No filters applied
+								<div className="text-center flex items-center justify-center gap-6 text-sm py-8 text-muted-foreground border border-dashed rounded-lg">
+									No filters applied yet
+									<SwirlyTopRightArrow className="size-14 -translate-y-4 fill-foreground" />
 								</div>
 							)}
 						</div>

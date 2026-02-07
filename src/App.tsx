@@ -10,20 +10,20 @@ import PhotoEditor from "./pages/photo-editor";
 
 function App() {
 	return (
-    <ThemeProvider defaultTheme="system" storageKey="picksy-ui-theme">
-      <PhotoLibraryProvider>
-        <TooltipProvider delayDuration={0}>
-          <Toaster />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/gallery" element={<ImageGallery />} />
-              <Route path="/edit" element={<PhotoEditor />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </PhotoLibraryProvider>
-    </ThemeProvider>
+		<ThemeProvider defaultTheme="system" storageKey="picksy-ui-theme">
+			<PhotoLibraryProvider>
+				<TooltipProvider delayDuration={0}>
+					<Toaster />
+					<BrowserRouter>
+						<Routes>
+							<Route path="/" element={<Home />} />
+							<Route path="/gallery" element={<ImageGallery />} />
+							<Route path="/edit" element={<PhotoEditor />} />
+						</Routes>
+					</BrowserRouter>
+				</TooltipProvider>
+			</PhotoLibraryProvider>
+		</ThemeProvider>
 	);
 }
 

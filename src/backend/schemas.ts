@@ -41,7 +41,7 @@ export const FilterOption = Schema.Union(
 
 export type FilterOption = Schema.Schema.Type<typeof FilterOption>;
 
-export type FilterType = FilterOption['type'];
+export type FilterType = FilterOption["type"];
 
 export const PhotoConfig = Schema.Struct({
 	filters: Schema.optional(

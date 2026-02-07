@@ -7,16 +7,16 @@ import { openEditWindow } from "@/lib/windows";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
 	HeartIcon,
+	Layers2Icon,
 	LayersIcon,
+	LayersPlusIcon,
 	PencilIcon,
 	Trash2Icon,
 	XIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
@@ -44,10 +44,6 @@ export default function ImageGallery() {
 	const [fullScreenPhoto, setFullScreenPhoto] = useState<Photo | null>(null);
 	const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
 	const [openStackId, setOpenStackId] = useState<string | null>(null);
-	const [autoStackingEnabled, setAutoStackingEnabled] = useState(false);
-	const [autoStackedStackIds, setAutoStackedStackIds] = useState<Set<string>>(
-		() => new Set(),
-	);
 
 	const filteredPhotos =
 		authorFilter === "all"
@@ -110,54 +106,6 @@ export default function ImageGallery() {
 		);
 	}, [filteredPhotoIds]);
 
-	useEffect(() => {
-		if (!autoStackingEnabled) return;
-		const unstacked = filteredPhotos.filter((photo) => !photo.stack_id);
-		if (unstacked.length < 2) return;
-
-		const groups = buildHeuristicStacks(unstacked);
-		if (groups.length === 0) return;
-
-		void (async () => {
-			for (const group of groups) {
-				if (group.length < 2) continue;
-				const stackId = crypto.randomUUID();
-				const sorted = [...group].sort((a, b) =>
-					a.filename.localeCompare(b.filename),
-				);
-				const primaryId = sorted[0].id;
-				const photoIds = sorted.map((photo) => photo.id);
-				try {
-					await setPhotoStack(photoIds, stackId, primaryId);
-					setAutoStackedStackIds((prev) => {
-						const next = new Set(prev);
-						next.add(stackId);
-						return next;
-					});
-				} catch {
-					toast.error("Failed to auto-stack images.");
-					break;
-				}
-			}
-		})();
-	}, [autoStackingEnabled, filteredPhotos, setPhotoStack]);
-
-	useEffect(() => {
-		if (autoStackingEnabled) return;
-		if (autoStackedStackIds.size === 0) return;
-		const stackIds = Array.from(autoStackedStackIds);
-		const photoIds = stackIds.flatMap(
-			(stackId) => stackGroups.get(stackId)?.map((photo) => photo.id) ?? [],
-		);
-		if (photoIds.length === 0) {
-			setAutoStackedStackIds(new Set());
-			return;
-		}
-		void clearPhotoStack(photoIds)
-			.then(() => setAutoStackedStackIds(new Set()))
-			.catch(() => toast.error("Failed to clear auto-stacked images."));
-	}, [autoStackingEnabled, autoStackedStackIds, clearPhotoStack, stackGroups]);
-
 	const selectedStackIds = useMemo(
 		() =>
 			Array.from(
@@ -174,6 +122,13 @@ export default function ImageGallery() {
 		selectedStackIds.length === 1 &&
 		selectedImages.every((photo) => photo.stack_id === selectedStackIds[0]);
 	const showStackAction = selectedImages.length >= 2 || selectedOnlyStack;
+
+	const stackIcon = selectedOnlyStack
+		? LayersIcon
+		: selectedStackIds.length === 1
+			? LayersPlusIcon
+			: Layers2Icon;
+
 	const stackActionLabel = selectedOnlyStack
 		? "Unstack"
 		: selectedStackIds.length === 1
@@ -338,8 +293,7 @@ export default function ImageGallery() {
 					onCreateStack={handleCreateStack}
 					stackActionLabel={stackActionLabel}
 					showStackAction={showStackAction}
-					autoStackingEnabled={autoStackingEnabled}
-					onToggleAutoStacking={setAutoStackingEnabled}
+					stackIcon={stackIcon}
 				/>
 
 				{loading && (
@@ -494,8 +448,7 @@ function GalleryNavigationBar({
 	onCreateStack,
 	stackActionLabel,
 	showStackAction,
-	autoStackingEnabled,
-	onToggleAutoStacking,
+	stackIcon: StackIcon,
 }: {
 	authorFilter: string;
 	setAuthorFilter: (value: string) => void;
@@ -503,8 +456,7 @@ function GalleryNavigationBar({
 	onCreateStack: () => void;
 	stackActionLabel: string;
 	showStackAction: boolean;
-	autoStackingEnabled: boolean;
-	onToggleAutoStacking: (enabled: boolean) => void;
+	stackIcon: React.ComponentType<{ className?: string}>;
 }) {
 	const { photos, removePhotoFromLibrary, setPhotos, setPhotosFavorite } =
 		usePhotoLibrary();
@@ -591,16 +543,6 @@ function GalleryNavigationBar({
 			</p>
 			<div className="relative flex items-center gap-2 text-sm! *:px-2!">
 				<ThemeToggle />
-				<div className="flex items-center gap-2">
-					<Switch
-						id="auto-stack-toggle"
-						checked={autoStackingEnabled}
-						onCheckedChange={onToggleAutoStacking}
-					/>
-					<Label htmlFor="auto-stack-toggle" className="text-sm">
-						Auto-stack similar
-					</Label>
-				</div>
 				<FilterUsers
 					photos={photos}
 					presence={presence}
@@ -642,6 +584,7 @@ function GalleryNavigationBar({
 				</Button>
 				{showStackAction && (
 					<Button variant="outline" onClick={onCreateStack}>
+						<StackIcon className="size-4" />
 						{stackActionLabel}
 					</Button>
 				)}
@@ -853,10 +796,10 @@ function AlbumPhoto({
 			aria-current={isActive ? "true" : undefined}
 			className={twMerge(
 				"relative cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200 outline-none" +
-				" shadow-md shadow-black/30",
+					" shadow-md shadow-black/30",
 				isActive ? "bg-primary/10" : "hover:bg-primary/10",
 				isSelected
-					? "border-primary ring-2 ring-primary ring-offset-2"
+					? "border-primary/50 ring-2 ring-primary ring-offset-1"
 					: "border-transparent hover:border-muted-foreground/50",
 			)}
 		>
@@ -893,7 +836,7 @@ function AlbumPhoto({
 			</ButtonWithTooltip>
 			{isSelected && (
 				<div className="absolute top-2 left-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-					<span className="text-white text-xs font-bold">
+					<span className="text-primary-foreground text-xs font-bold">
 						{selectedImages.findIndex((img) => img.id === image.id) + 1}
 					</span>
 				</div>
@@ -914,69 +857,6 @@ function AlbumPhoto({
 			)}
 		</div>
 	);
-}
-
-type FilenameSignature = {
-	key: string;
-	numericSuffix?: number;
-};
-
-function buildHeuristicStacks(photos: Photo[]): Photo[][] {
-	const byKey = new Map<string, { photo: Photo; numericSuffix?: number }[]>();
-	for (const photo of photos) {
-		const signature = getFilenameSignature(photo.filename);
-		const existing = byKey.get(signature.key) ?? [];
-		existing.push({ photo, numericSuffix: signature.numericSuffix });
-		byKey.set(signature.key, existing);
-	}
-
-	const groups: Photo[][] = [];
-	for (const entries of byKey.values()) {
-		if (entries.length < 2) continue;
-		const withNumber = entries.every(
-			(entry) => entry.numericSuffix !== undefined,
-		);
-		if (!withNumber) {
-			groups.push(entries.map((entry) => entry.photo));
-			continue;
-		}
-		const sorted = [...entries].sort(
-			(a, b) => (a.numericSuffix ?? 0) - (b.numericSuffix ?? 0),
-		);
-		let current: Photo[] = [sorted[0].photo];
-		for (let i = 1; i < sorted.length; i += 1) {
-			const prev = sorted[i - 1].numericSuffix ?? 0;
-			const next = sorted[i].numericSuffix ?? 0;
-			if (next - prev <= 3) {
-				current.push(sorted[i].photo);
-			} else {
-				if (current.length >= 2) {
-					groups.push(current);
-				}
-				current = [sorted[i].photo];
-			}
-		}
-		if (current.length >= 2) {
-			groups.push(current);
-		}
-	}
-	return groups;
-}
-
-function getFilenameSignature(filename: string): FilenameSignature {
-	const lower = filename.toLowerCase();
-	const withoutExt = lower.replace(/\.[^/.]+$/, "");
-	const dateMatch =
-		withoutExt.match(/\b(20\d{2}[01]\d[0-3]\d)\b/) ??
-		withoutExt.match(/\b(20\d{2}-[01]\d-[0-3]\d)\b/);
-	const dateKey = dateMatch?.[1];
-	const suffixMatch = withoutExt.match(/(\d+)\s*$/);
-	const numericSuffix = suffixMatch
-		? Number.parseInt(suffixMatch[1], 10)
-		: undefined;
-	const base = withoutExt.replace(/[\s_-]*\d+$/, "").trim();
-	const key = dateKey ? `${base}|${dateKey}` : base;
-	return { key, numericSuffix };
 }
 
 function ActiveUsers({ presence }: { presence: PresencePayload | null }) {

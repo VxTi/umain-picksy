@@ -1,6 +1,6 @@
-import { usePhotoLibrary }    from "@/backend/photo-library-context";
-import { Photo, PhotoConfig } from '@/backend/schemas';
-import { EventType }          from "@/lib/events";
+import { usePhotoLibrary } from "@/backend/photo-library-context";
+import { Photo, PhotoConfig } from "@/backend/schemas";
+import { EventType } from "@/lib/events";
 import { SaveIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -109,7 +109,7 @@ function PhotoEditor() {
 									"transition-all duration-300",
 									editingPhotos.length > 1 && activeImageIndex !== i
 										? "opacity-50 scale-90"
-										: "opacity-100 scale-100"
+										: "opacity-100 scale-100",
 								)}
 							/>
 							{editingPhotos.length > 1 && (
@@ -134,8 +134,11 @@ function PhotoEditor() {
 	);
 }
 
-function SaveEditsButton({ editingPhotos}: { editingPhotos: Readonly<Photo[]> }) {
-
+function SaveEditsButton({
+	editingPhotos,
+}: {
+	editingPhotos: Readonly<Photo[]>;
+}) {
 	const { saveImageConfig } = usePhotoLibrary();
 
 	const handleSave = async () => {
@@ -154,7 +157,7 @@ function SaveEditsButton({ editingPhotos}: { editingPhotos: Readonly<Photo[]> })
 			<SaveIcon className="size-4" />
 			<span className="text-white!"> Save edits</span>
 		</button>
-	)
+	);
 }
 
 export default PhotoEditor;
