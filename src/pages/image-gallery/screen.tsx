@@ -322,7 +322,7 @@ export default function ImageGallery() {
 			<AnimatePresence>
 				{fullScreenPhoto && (
 					<FullScreenImagePreview
-						fullScreenPhoto={fullScreenPhoto}
+						photo={fullScreenPhoto}
 						setFullScreenPhoto={setFullScreenPhoto}
 						fullScreenSrc={fullScreenSrc}
 						photos={displayPhotos}

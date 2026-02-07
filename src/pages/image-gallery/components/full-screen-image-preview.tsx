@@ -1,9 +1,19 @@
+import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Photo } from "@/backend/schemas";
 import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { PhotoComponent } from "@/components/photo-component";
-import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import { openEditWindow } from "@/lib/windows";
+import {
+	ChevronLeftIcon,
+	ChevronRightIcon,
+	HeartIcon,
+	PencilIcon,
+	Trash2Icon,
+	XIcon,
+} from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { twMerge } from "tailwind-merge";
 
 const variants = {
 	enter: (direction: number) => ({
@@ -23,7 +33,7 @@ const variants = {
 };
 
 interface FullScreenImagePreviewProps {
-	fullScreenPhoto: Readonly<Photo>;
+	photo: Readonly<Photo>;
 	setFullScreenPhoto: React.Dispatch<
 		React.SetStateAction<Readonly<Photo> | null>
 	>;
@@ -31,7 +41,7 @@ interface FullScreenImagePreviewProps {
 	photos: Readonly<Photo[]>;
 }
 export default function FullScreenImagePreview({
-	fullScreenPhoto,
+	photo,
 	setFullScreenPhoto,
 	fullScreenSrc,
 	photos,
@@ -42,7 +52,7 @@ export default function FullScreenImagePreview({
 	useEffect(() => {
 		setPage([0, 0]);
 	}, [setPage]);
-	const currentIndex = photos.findIndex((p) => p.id === fullScreenPhoto.id);
+	const currentIndex = photos.findIndex((p) => p.id === photo.id);
 	const hasPrev = currentIndex > 0;
 	const hasNext = currentIndex < photos.length - 1;
 
@@ -99,7 +109,7 @@ export default function FullScreenImagePreview({
 							goToPrev();
 						}}
 						aria-label="Previous image"
-						className="absolute left-4 z-20 pointer-events-auto text-white/80 hover:text-white hover:bg-white/10 h-12 w-12"
+						className="absolute left-4 z-20 rounded-full! pointer-events-auto text-white/80 hover:text-white hover:bg-white/10 h-12 w-12"
 						tooltip="Previous image (←)"
 					>
 						<ChevronLeftIcon className="h-8 w-8" />
@@ -117,21 +127,22 @@ export default function FullScreenImagePreview({
 							goToNext();
 						}}
 						aria-label="Next image"
-						className="absolute right-4 z-20 pointer-events-auto text-white/80 hover:text-white hover:bg-white/10 h-12 w-12"
+						className="absolute right-4 z-20 rounded-full! pointer-events-auto text-white/80 hover:text-white hover:bg-white/10 h-12 w-12"
 						tooltip="Next image (→)"
 					>
 						<ChevronRightIcon className="h-8 w-8" />
 					</ButtonWithTooltip>
 				)}
+				<PhotoActions photo={photo} onDelete={() => setFullScreenPhoto(null)} />
 				<motion.div
-					layoutId={`photo-${fullScreenPhoto.id}`}
+					layoutId={`photo-${photo.id}`}
 					transition={{ type: "spring", damping: 30, stiffness: 300 }}
-					className="relative flex items-center justify-center pointer-events-auto w-full h-full max-w-full max-h-full"
+					className="relative flex items-center justify-center pointer-events-none w-full h-full max-w-full max-h-full"
 				>
 					<div className="relative flex h-full w-full items-center justify-center overflow-hidden pointer-events-none">
 						<AnimatePresence initial={false} custom={direction}>
 							<motion.div
-								key={fullScreenPhoto.id}
+								key={photo.id}
 								custom={direction}
 								variants={variants}
 								initial="enter"
@@ -144,18 +155,16 @@ export default function FullScreenImagePreview({
 								className="absolute flex items-center justify-center pointer-events-auto w-full h-full max-w-full max-h-full"
 							>
 								<PhotoComponent
-									src={fullScreenSrc ?? fullScreenPhoto.base64}
-									alt={fullScreenPhoto.filename}
-									config={fullScreenPhoto.config ?? {}}
+									src={fullScreenSrc ?? photo.base64}
+									alt={photo.filename}
+									config={photo.config ?? {}}
 									className="max-w-full max-h-[90vh]"
 								/>
 							</motion.div>
 						</AnimatePresence>
 
 						<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80 z-20 pointer-events-auto">
-							<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
-								ESC
-							</span>
+							<span className="rounded font-mono mr-0.5 text-xs">ESC</span>
 							<ButtonWithTooltip
 								variant="ghost"
 								size="icon-xs"
@@ -165,15 +174,83 @@ export default function FullScreenImagePreview({
 									setFullScreenPhoto(null);
 								}}
 								aria-label="Close full screen"
-								className="text-white/80 transition-colors hover:text-white"
+								className="text-white/80 transition-colors hover:text-white rounded-full!"
 								tooltip="Close full screen"
 							>
-								<XIcon className="h-5 w-5" />
+								<XIcon className="size-4" />
 							</ButtonWithTooltip>
 						</div>
 					</div>
 				</motion.div>
 			</div>
 		</motion.div>
+	);
+}
+
+function PhotoActions({
+	photo,
+	onDelete,
+}: {
+	photo: Photo;
+	onDelete?: () => void;
+}) {
+	const { setPhotoFavorite, removePhotoFromLibrary } = usePhotoLibrary();
+	return (
+		<div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ delay: 0.3 }}
+				className="flex items-center gap-4"
+			>
+				<div className="flex items-center gap-1 rounded-full p-2 bg-black/40 border border-white/10 shadow-2xl backdrop-blur-2xl">
+					<ButtonWithTooltip
+						variant="ghost"
+						size="icon-sm"
+						tooltip={
+							photo.favorite ? "Remove from favorites" : "Add to favorites"
+						}
+						className={twMerge(
+							"border-transparent! hover:bg-white/10 text-white/80 hover:text-white bg-transparent!",
+							photo.favorite && "text-red-500 hover:text-red-600",
+						)}
+						onClick={async (e) => {
+							e.stopPropagation();
+							await setPhotoFavorite(photo.id, !photo.favorite);
+						}}
+					>
+						<HeartIcon className={photo.favorite ? "fill-current" : ""} />
+					</ButtonWithTooltip>
+					<ButtonWithTooltip
+						variant="ghost"
+						size="icon-sm"
+						tooltip="Edit image"
+						className="border-transparent! hover:bg-white/10 text-white/80 hover:text-white bg-transparent!"
+						onClick={(e) => {
+							e.stopPropagation();
+							void openEditWindow([photo]);
+						}}
+					>
+						<PencilIcon />
+					</ButtonWithTooltip>
+					<div className="w-px h-4 bg-white/20 mx-1" />
+					<ButtonWithTooltip
+						variant="ghost"
+						size="icon-sm"
+						tooltip="Delete image"
+						className="border-transparent! text-white/70 hover:text-red-500 hover:bg-white/10 bg-transparent!"
+						onClick={async (e) => {
+							e.stopPropagation();
+							if (confirm("Are you sure you want to delete this image?")) {
+								await removePhotoFromLibrary(photo);
+								onDelete?.();
+							}
+						}}
+					>
+						<Trash2Icon />
+					</ButtonWithTooltip>
+				</div>
+			</motion.div>
+		</div>
 	);
 }

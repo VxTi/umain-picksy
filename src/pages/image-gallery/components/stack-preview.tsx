@@ -49,7 +49,7 @@ export default function StackPreview({
 				animate={{ opacity: 1 }}
 				exit={{ opacity: 0 }}
 				className="fixed inset-0 bg-black/50 backdrop-blur-sm z-0"
-				/>
+			/>
 			<motion.div
 				initial={{ opacity: 0, scale: 0.9, y: 20 }}
 				animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -61,12 +61,12 @@ export default function StackPreview({
 					<div className="flex items-center gap-3">
 						<div>
 							<div>
-							<h3 className="text-lg font-semibold leading-none">
-								Photo Stack
-							</h3>
-							<p className="text-primary font-bold text-lg leading-none">
-								{openStackPhotos.length}
-							</p>
+								<h3 className="text-lg font-semibold leading-none">
+									Photo Stack
+								</h3>
+								<p className="text-primary font-bold text-lg leading-none">
+									{openStackPhotos.length}
+								</p>
 							</div>
 							<p className="text-sm text-muted-foreground mt-1">
 								Manage and select the primary photo for this stack
