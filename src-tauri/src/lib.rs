@@ -2,6 +2,10 @@ mod ditto_repo;
 
 use ditto_repo::{AppState, DittoRepository};
 use tauri::{Manager, State};
+use tauri::{
+  menu::{Menu, MenuItem},
+  tray::TrayIconBuilder,
+};
 
 mod commands;
 
@@ -37,6 +41,24 @@ pub fn run() {
                 },
             )?;
             app.manage(repo);
+
+            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&quit_i])?;
+
+            let tray = TrayIconBuilder::new()
+                .on_menu_event(|app, event| match event.id.as_ref() {
+                    "quit" => {
+                    println!("quit menu item was clicked");
+                    app.exit(0);
+                    }
+                    _ => {
+                    println!("menu item {:?} not handled", event.id);
+                    }
+                })
+                .menu(&menu)
+                .menu_on_left_click(true)
+                .build(app);
+
             Ok(())
         })
         .plugin(tauri_plugin_store::Builder::new().build())
