@@ -33,7 +33,7 @@ export default function PicksyView() {
 						<img
 							src="/picksy_logo_2.png"
 							alt="logo"
-							className="w-100 h-100 object-contain"
+							className="h-100 object-containc dark:invert"
 						/>
 					</div>
 
