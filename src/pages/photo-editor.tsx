@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 import PhotoEditorSidebar from "../components/photo-editor-sidebar";
 import { PhotoComponent } from "./photo-component";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 function PhotoEditor() {
 	const { saveImageConfig } = usePhotoLibrary();
@@ -63,6 +64,7 @@ function PhotoEditor() {
 					</p>
 
 					<div className="flex gap-2">
+						<ThemeToggle />
 						{editingPhotos.length > 1 && (
 							<div
 								className="flex bg-muted rounded-lg p-1"

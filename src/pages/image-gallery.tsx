@@ -21,6 +21,7 @@ import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface PresencePeer {
 	peer_key: string;
@@ -589,6 +590,7 @@ function GalleryNavigationBar({
 				selected)
 			</p>
 			<div className="relative flex items-center gap-2 text-sm! *:px-2!">
+				<ThemeToggle />
 				<div className="flex items-center gap-2">
 					<Switch
 						id="auto-stack-toggle"
