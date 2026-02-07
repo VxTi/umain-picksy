@@ -1,21 +1,15 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
-import { AppLocation } from "@/lib/app-locations";
 import type { Photo, PhotoConfig } from "@/backend/schemas";
+import ScreenWrapper from "@/components/screen-wrapper";
 import { EventType } from "@/lib/events";
-import { SaveIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import Header from "@/pages/photo-editor/components/header";
 import { useState, useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { getCurrentWindow } from "@tauri-apps/api/window";
-import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
-import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
-import PhotoEditorSidebar from "../components/photo-editor-sidebar";
-import { PhotoComponent } from "./photo-component";
-import { ThemeToggle } from "@/components/theme-toggle";
+import PhotoEditorSidebar from "../../components/photo-editor-sidebar";
+import { PhotoComponent } from "@/components/photo-component";
 
-function PhotoEditor() {
-	const navigate = useNavigate();
+export default function PhotoEditor() {
 	const { getFullResAttachment } = usePhotoLibrary();
 
 	const [editingPhotos, setEditingPhotos] = useState<Readonly<Photo[]>>([]);
@@ -81,52 +75,12 @@ function PhotoEditor() {
 	const hasEditablePhotos = editingPhotos.length > 0;
 
 	return (
-		<main className="h-screen bg-background flex flex-col overflow-hidden">
-			<div
-				className="p-4 shrink-0"
-				onMouseDown={() => getCurrentWindow().startDragging()}
-			>
-				<div className="flex items-center justify-between">
-					<p className="text-sm text-muted-foreground select-none pointer-events-none">
-						{hasEditablePhotos
-							? `${editingPhotos.length} image(s) selected for editing`
-							: "No images selected"}
-					</p>
-
-					<div className="flex gap-2">
-						<ThemeToggle />
-						{editingPhotos.length > 1 && (
-							<div
-								className="flex bg-muted rounded-lg p-1"
-								onMouseDown={(e) => e.stopPropagation()}
-							>
-								{editingPhotos.map((photo, i) => (
-									<ButtonWithTooltip
-										key={photo.id}
-										variant={activeImageIndex === i ? "default" : "ghost"}
-										size="sm"
-										onClick={() => setActiveImageIndex(i)}
-										tooltip={`Edit Image ${i + 1}: ${photo.filename}`}
-									>
-										Image {i + 1}
-									</ButtonWithTooltip>
-								))}
-							</div>
-						)}
-						<SaveEditsButton editingPhotos={editingPhotos} />
-						{!hasEditablePhotos && (
-							<ButtonWithTooltip
-								variant="outline"
-								onClick={() => navigate(AppLocation.HOME)}
-								onMouseDown={(e) => e.stopPropagation()}
-								tooltip="Return to the gallery view"
-							>
-								Go to Gallery
-							</ButtonWithTooltip>
-						)}
-					</div>
-				</div>
-			</div>
+		<ScreenWrapper>
+			<Header
+				editingPhotos={editingPhotos}
+				activeImageIndex={activeImageIndex}
+				setActiveImageIndex={setActiveImageIndex}
+			/>
 
 			<div className="flex flex-1 overflow-hidden bg-black/5">
 				{/* Image Preview Area */}
@@ -168,34 +122,6 @@ function PhotoEditor() {
 					onConfigChange={onConfigChange}
 				/>
 			</div>
-		</main>
+		</ScreenWrapper>
 	);
 }
-
-function SaveEditsButton({
-	editingPhotos,
-}: {
-	editingPhotos: Readonly<Photo[]>;
-}) {
-	const { saveImageConfig } = usePhotoLibrary();
-
-	const handleSave = async () => {
-		for (const photo of editingPhotos) {
-			await saveImageConfig(photo.id, photo.config ?? {});
-		}
-		toast.info("Images saved successfully");
-	};
-
-	return (
-		<button
-			onMouseDown={(e) => e.stopPropagation()}
-			onClick={handleSave}
-			className="flex items-center gap-1 rounded-full py-1! font-semibold shadow-lg transition-all text-white! bg-blue-400! hover:bg-blue-100 border border-blue-400"
-		>
-			<SaveIcon className="size-4" />
-			<span className="text-white!"> Save edits</span>
-		</button>
-	);
-}
-
-export default PhotoEditor;
