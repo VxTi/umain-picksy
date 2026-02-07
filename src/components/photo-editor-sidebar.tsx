@@ -204,12 +204,19 @@ function DraggableFilter({
 export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 	const swapyRef = useRef<any>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
+	const configRef = useRef(config);
+	const onConfigChangeRef = useRef(onConfigChange);
+
+	useEffect(() => {
+		configRef.current = config;
+		onConfigChangeRef.current = onConfigChange;
+	}, [config, onConfigChange]);
 
 	const filters = useMemo(
 		() =>
 			(config.filters ?? []).map((f) => ({
 				...f,
-				id: f.id ?? Math.random().toString(36).substring(7),
+				id: f.id ?? "temp-id-" + f.type + "-" + Math.random().toString(36).substring(7),
 			})),
 		[config.filters],
 	);
@@ -221,18 +228,22 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 				const { slotItemMap } = event;
 				const newOrder = slotItemMap.asArray.map((m: SlotItemMapArray[number]) => m.item);
 
-				const reorderedFilters = [...filters].sort((a, b) => {
-					return newOrder.indexOf(a.id) - newOrder.indexOf(b.id);
+				const currentConfig = configRef.current;
+				const currentFilters = [...(currentConfig.filters ?? [])];
+				const reorderedFilters = currentFilters.sort((a, b) => {
+					const aId = a.id || "";
+					const bId = b.id || "";
+					return newOrder.indexOf(aId) - newOrder.indexOf(bId);
 				});
 
-				onConfigChange({ ...config, filters: reorderedFilters });
+				onConfigChangeRef.current({ ...currentConfig, filters: reorderedFilters });
 			});
 		}
 
 		return () => {
 			swapyRef.current?.destroy();
 		};
-	}, [filters, config, onConfigChange]);
+	}, [config.filters?.length]);
 
 	const addFilter = (type: FilterType) => {
 		const filterType = FILTER_TYPES.find((f) => f.type === type);
@@ -244,7 +255,7 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 			filters: [
 				...currentFilters,
 				{
-					id: Math.random().toString(36).substring(7),
+					id: crypto.randomUUID(),
 					type,
 					value: filterType.defaultValue,
 				},
