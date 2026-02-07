@@ -35,13 +35,20 @@ interface PresencePayload {
 }
 
 export default function ImageGallery() {
-	const { photos, loading, setPhotoStack, setStackPrimary, clearPhotoStack } =
-		usePhotoLibrary();
+	const {
+		photos,
+		loading,
+		setPhotoStack,
+		setStackPrimary,
+		clearPhotoStack,
+		getFullResAttachment,
+	} = usePhotoLibrary();
 
 	const [authorFilter, setAuthorFilter] = useState("all");
 
 	const [selectedImages, setSelectedImages] = useState<Readonly<Photo[]>>([]);
 	const [fullScreenPhoto, setFullScreenPhoto] = useState<Photo | null>(null);
+	const [fullScreenSrc, setFullScreenSrc] = useState<string | null>(null);
 	const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
 	const [openStackId, setOpenStackId] = useState<string | null>(null);
 
@@ -197,6 +204,34 @@ export default function ImageGallery() {
 	}, [openStackId, stackGroups]);
 
 	useEffect(() => {
+		if (!fullScreenPhoto) {
+			setFullScreenSrc(null);
+			return;
+		}
+
+		let cancelled = false;
+		setFullScreenSrc(null);
+
+		if (!fullScreenPhoto.full_res_attachment) {
+			return () => {
+				cancelled = true;
+			};
+		}
+
+		void getFullResAttachment(fullScreenPhoto.id)
+			.then((src) => {
+				if (!cancelled && src) {
+					setFullScreenSrc(src);
+				}
+			})
+			.catch(() => {});
+
+		return () => {
+			cancelled = true;
+		};
+	}, [fullScreenPhoto, getFullResAttachment]);
+
+	useEffect(() => {
 		if (!fullScreenPhoto && !openStackId) return;
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === "Escape") {
@@ -349,7 +384,7 @@ export default function ImageGallery() {
 							</ButtonWithTooltip>
 						</div>
 						<PhotoComponent
-							src={fullScreenPhoto.base64}
+							src={fullScreenSrc ?? fullScreenPhoto.base64}
 							alt={fullScreenPhoto.filename}
 							config={fullScreenPhoto.config ?? {}}
 						/>

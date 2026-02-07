@@ -14,6 +14,7 @@ use dittolive_ditto::store::attachment::{DittoAttachment, DittoAttachmentToken};
 use serde::{Deserialize, Serialize};
 use tauri::path::BaseDirectory;
 use tauri::{AppHandle, Emitter, Manager};
+use base64::{engine::general_purpose, Engine as _};
 
 const STATE_COLLECTION: &str = "app_state";
 const STATE_DOC_ID: &str = "root";
@@ -493,6 +494,64 @@ impl DittoRepository {
 
     pub async fn emit_library_snapshot(&self, app: &AppHandle) -> Result<(), String> {
         emit_library_snapshot(self.ditto.as_ref(), app).await
+    }
+
+    pub async fn fetch_full_res_photo(&self, id: &str) -> Result<Option<String>, String> {
+        let store = self.ditto.store();
+        let result = store
+            .execute_v2((
+                format!(
+                    "SELECT * FROM COLLECTION {PHOTOS_COLLECTION} (full_res_attachment ATTACHMENT) WHERE _id = :id"
+                ),
+                serde_json::json!({ "id": id }),
+            ))
+            .await
+            .map_err(|e| format!("Failed to query Ditto photo attachment: {e}"))?;
+
+        let Some(item) = result.iter().next() else {
+            return Ok(None);
+        };
+
+        let doc: PhotoDocument = item
+            .deserialize_value()
+            .map_err(|e| format!("Failed to deserialize Ditto photo: {e}"))?;
+        let Some(token) = doc.full_res_attachment else {
+            return Ok(None);
+        };
+
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        let tx = std::sync::Arc::new(std::sync::Mutex::new(Some(tx)));
+        let _fetcher = store
+            .fetch_attachment(token.clone(), move |event| match event {
+                dittolive_ditto::store::attachment::DittoAttachmentFetchEvent::Completed {
+                    attachment,
+                } => {
+                    if let Some(sender) = tx.lock().ok().and_then(|mut s| s.take()) {
+                        let _ = sender.send(Ok(attachment));
+                    }
+                }
+                dittolive_ditto::store::attachment::DittoAttachmentFetchEvent::Deleted => {
+                    if let Some(sender) = tx.lock().ok().and_then(|mut s| s.take()) {
+                        let _ = sender.send(Err("Attachment deleted".to_string()));
+                    }
+                }
+                _ => {}
+            })
+            .map_err(|e| format!("Failed to fetch Ditto attachment: {e}"))?;
+
+        let attachment = tokio::time::timeout(std::time::Duration::from_secs(60), rx)
+            .await
+            .map_err(|_| "Timed out fetching attachment".to_string())?
+            .map_err(|_| "Attachment fetch cancelled".to_string())??;
+
+        let bytes = std::fs::read(attachment.path()).map_err(|e| e.to_string())?;
+        let mime_type = token
+            .metadata()
+            .get("mime_type")
+            .cloned()
+            .unwrap_or_else(|| "application/octet-stream".to_string());
+        let encoded = general_purpose::STANDARD.encode(bytes);
+        Ok(Some(format!("data:{};base64,{}", mime_type, encoded)))
     }
 }
 

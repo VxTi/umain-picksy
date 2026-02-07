@@ -23,6 +23,7 @@ use commands::photo_library_commands::{
     set_photo_stack,
     set_stack_primary,
     clear_photo_stack,
+    get_full_res_attachment,
 };
 
 #[tauri::command]
@@ -56,7 +57,7 @@ pub fn run() {
                     }
                 })
                 .menu(&menu)
-                .menu_on_left_click(true)
+                .show_menu_on_left_click(true)
                 .build(app);
 
             Ok(())
@@ -79,7 +80,8 @@ pub fn run() {
             set_photos_favorite,
             set_photo_stack,
             set_stack_primary,
-            clear_photo_stack
+            clear_photo_stack,
+            get_full_res_attachment
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

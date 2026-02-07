@@ -1,5 +1,5 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
-import { Photo, PhotoConfig } from "@/backend/schemas";
+import type { Photo, PhotoConfig } from "@/backend/schemas";
 import { EventType } from "@/lib/events";
 import { SaveIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -15,8 +15,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 function PhotoEditor() {
 	const navigate = useNavigate();
+	const { getFullResAttachment } = usePhotoLibrary();
 
 	const [editingPhotos, setEditingPhotos] = useState<Readonly<Photo[]>>([]);
+	const [fullResById, setFullResById] = useState<Record<string, string>>({});
 
 	// Listen for images from the gallery window via events
 	useEffect(() => {
@@ -31,6 +33,33 @@ function PhotoEditor() {
 	}, []);
 
 	const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+	useEffect(() => {
+		let cancelled = false;
+		const pending = editingPhotos.filter(
+			(photo) => Boolean(photo.full_res_attachment) && !fullResById[photo.id],
+		);
+		if (pending.length === 0) return;
+
+		const fetchAll = async () => {
+			for (const photo of pending) {
+				try {
+					const src = await getFullResAttachment(photo.id);
+					if (!cancelled && src) {
+						setFullResById((prev) => ({ ...prev, [photo.id]: src }));
+					}
+				} catch {
+					// Ignore fetch errors, fallback stays on thumbnail
+				}
+			}
+		};
+
+		void fetchAll();
+
+		return () => {
+			cancelled = true;
+		};
+	}, [editingPhotos, fullResById, getFullResAttachment]);
 
 	const onConfigChange = (config: PhotoConfig) => {
 		setEditingPhotos((prev) =>
@@ -101,7 +130,7 @@ function PhotoEditor() {
 							)}
 						>
 							<PhotoComponent
-								src={photo.base64}
+								src={fullResById[photo.id] ?? photo.base64}
 								alt={photo.filename}
 								config={photo.config ?? {}}
 								onClick={() => setActiveImageIndex(i)}
