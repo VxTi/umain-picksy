@@ -7,6 +7,28 @@ https://docs.ditto.live/sdk/latest/install-guides/rust
 
 We use it to keep the state of the library in sync between users collaborating.
 
+## Mobile SDK override (Android/iOS)
+
+For mobile builds, you can provide the closed-source Ditto SDK yourself (from the
+Android/iOS SDKs) instead of using the Rust SDK. Point the build to the prebuilt
+Ditto FFI library by exporting one of the following environment variables.
+
+Android (aarch64):
+```bash
+export DITTOFFI_SEARCH_PATH=/path/to/ditto/android/aarch64
+# or
+export AARCH64_LINUX_ANDROID_OUT_DIR=/path/to/ditto/android/aarch64
+RUSTUP_TOOLCHAIN=1.88 bunx tauri android dev
+```
+
+iOS (aarch64):
+```bash
+export DITTOFFI_SEARCH_PATH=/path/to/ditto/ios/aarch64
+# or
+export AARCH64_APPLE_IOS_OUT_DIR=/path/to/ditto/ios/aarch64
+RUSTUP_TOOLCHAIN=1.88 bunx tauri ios dev
+```
+
 Troubleshooting docs are here: https://docs.ditto.live/sdk/latest/deployment/troubleshooting
 Index:
 OBTAINING AND ANALYZING THE DEBUG LOGS
