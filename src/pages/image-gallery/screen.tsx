@@ -15,6 +15,7 @@ import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function ImageGallery() {
 	const { photos, setPhotoStack, clearPhotoStack, getFullResAttachment } =
@@ -308,17 +309,25 @@ export default function ImageGallery() {
 					</div>
 				</div>
 			</div>
-			<FullScreenImagePreview
-				fullScreenPhoto={fullScreenPhoto}
-				setFullScreenPhoto={setFullScreenPhoto}
-				fullScreenSrc={fullScreenSrc}
-				photos={displayPhotos}
-			/>
-			<StackPreview
-				openStackId={openStackId}
-				setOpenStackId={setOpenStackId}
-				openStackPhotos={openStackPhotos}
-			/>
+			<AnimatePresence>
+				{fullScreenPhoto && (
+					<FullScreenImagePreview
+						fullScreenPhoto={fullScreenPhoto}
+						setFullScreenPhoto={setFullScreenPhoto}
+						fullScreenSrc={fullScreenSrc}
+					/>
+				)}
+			</AnimatePresence>
+			<AnimatePresence>
+				{openStackId && (
+					<StackPreview
+						openStackId={openStackId}
+						setOpenStackId={setOpenStackId}
+						openStackPhotos={openStackPhotos}
+						onOpenFullScreen={setFullScreenPhoto}
+					/>
+				)}
+			</AnimatePresence>
 		</main>
 	);
 }
@@ -435,12 +444,13 @@ function AlbumPhoto({
 					: "border-transparent hover:border-muted-foreground/50",
 			)}
 		>
-			<PhotoComponent
-				src={image.base64}
-				alt={image.filename}
-				config={image.config ?? {}}
-				className="h-60"
-			/>
+			<motion.div layoutId={`photo-${image.id}`} className="h-60">
+				<PhotoComponent
+					src={image.base64}
+					alt={image.filename}
+					config={image.config ?? {}}
+				/>
+			</motion.div>
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
 			</div>
