@@ -312,6 +312,7 @@ export default function ImageGallery() {
 				fullScreenPhoto={fullScreenPhoto}
 				setFullScreenPhoto={setFullScreenPhoto}
 				fullScreenSrc={fullScreenSrc}
+				photos={displayPhotos}
 			/>
 			<StackPreview
 				openStackId={openStackId}
