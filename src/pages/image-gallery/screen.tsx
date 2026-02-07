@@ -318,11 +318,16 @@ export default function ImageGallery() {
 					/>
 				)}
 			</AnimatePresence>
-			<StackPreview
-				openStackId={openStackId}
-				setOpenStackId={setOpenStackId}
-				openStackPhotos={openStackPhotos}
-			/>
+			<AnimatePresence>
+				{openStackId && (
+					<StackPreview
+						openStackId={openStackId}
+						setOpenStackId={setOpenStackId}
+						openStackPhotos={openStackPhotos}
+						onOpenFullScreen={setFullScreenPhoto}
+					/>
+				)}
+			</AnimatePresence>
 		</main>
 	);
 }

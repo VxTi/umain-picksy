@@ -2,21 +2,24 @@ import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Photo } from "@/backend/schemas";
 import { Button } from "@/components/ui/button";
 import { PhotoComponent } from "@/components/photo-component";
-import { XIcon } from "lucide-react";
+import { XIcon, CheckCircle2Icon } from "lucide-react";
 import React, { useMemo } from "react";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
+import { motion } from "framer-motion";
 
 interface StackPreviewProps {
 	openStackId: string | null;
 	setOpenStackId: React.Dispatch<React.SetStateAction<string | null>>;
 	openStackPhotos: Readonly<Photo[]>;
+	onOpenFullScreen: (photo: Photo) => void;
 }
 
 export default function StackPreview({
 	openStackId,
 	setOpenStackId,
 	openStackPhotos,
+	onOpenFullScreen,
 }: StackPreviewProps) {
 	const { setStackPrimary } = usePhotoLibrary();
 
@@ -40,82 +43,112 @@ export default function StackPreview({
 	if (!openStackId) return null;
 
 	return (
-		<div className="fixed inset-0 z-40">
-			<button
+		<div className="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-6">
+			<motion.button
+				initial={{ opacity: 0 }}
+				animate={{ opacity: 1 }}
+				exit={{ opacity: 0 }}
 				type="button"
-				className="absolute inset-0 bg-black/80"
+				className="absolute inset-0 bg-black/60 backdrop-blur-sm"
 				onClick={() => setOpenStackId(null)}
 				aria-label="Close stack"
 			/>
-			<div className="relative z-10 flex h-full items-center justify-center p-6">
-				<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80">
-					<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
-						ESC
-					</span>
-					<button
-						type="button"
-						onClick={(event) => {
-							event.stopPropagation();
-							setOpenStackId(null);
-						}}
-						aria-label="Close stack"
-						className="p-1 text-white/80 transition-colors hover:text-white"
-					>
-						<XIcon className="h-5 w-5" />
-					</button>
-				</div>
-				<div className="w-full max-w-5xl rounded-xl bg-background/95 p-4 shadow-lg">
-					<div className="mb-4 flex items-center justify-between">
-						<div>
-							<p className="text-sm text-muted-foreground">
-								Stack ({openStackPhotos.length})
+			<motion.div
+				initial={{ opacity: 0, scale: 0.9, y: 20 }}
+				animate={{ opacity: 1, scale: 1, y: 0 }}
+				exit={{ opacity: 0, scale: 0.9, y: 20 }}
+				transition={{ type: "spring", damping: 25, stiffness: 300 }}
+				className="relative z-10 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl bg-background/95 backdrop-blur-md shadow-2xl border border-white/10"
+			>
+				<div className="flex items-center justify-between p-4 border-b border-border/50">
+					<div className="flex items-center gap-3">
+						<div className="bg-primary/10 p-2 rounded-lg">
+							<p className="text-primary font-bold text-lg leading-none">
+								{openStackPhotos.length}
 							</p>
-							{openStackPrimaryId && (
-								<p className="text-base font-semibold">
-									Primary:{" "}
-									{
-										openStackPhotos.find(
-											(photo) => photo.id === openStackPrimaryId,
-										)?.filename
-									}
-								</p>
-							)}
+						</div>
+						<div>
+							<h3 className="text-lg font-semibold leading-none">Photo Stack</h3>
+							<p className="text-sm text-muted-foreground mt-1">
+								Manage and select the primary photo for this stack
+							</p>
 						</div>
 					</div>
-					<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+					<div className="flex items-center gap-3">
+						<span className="hidden sm:flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[10px] font-medium text-muted-foreground bg-muted/30 uppercase tracking-wider">
+							ESC to close
+						</span>
+						<button
+							type="button"
+							onClick={() => setOpenStackId(null)}
+							className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+							aria-label="Close stack"
+						>
+							<XIcon className="h-5 w-5" />
+						</button>
+					</div>
+				</div>
+
+				<div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
+					<div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
 						{openStackPhotos.map((photo) => {
 							const isPrimary = photo.id === openStackPrimaryId;
 							return (
-								<div
+								<motion.div
 									key={photo.id}
+									whileHover={{ y: -4 }}
 									className={twMerge(
-										"relative rounded-lg border-2 p-2",
-										isPrimary ? "border-primary" : "border-muted-foreground/30",
+										"group relative flex flex-col gap-3 rounded-xl p-3 transition-all duration-300",
+										isPrimary
+											? "bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background"
+											: "bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border",
 									)}
 								>
-									<PhotoComponent
-										src={photo.base64}
-										alt={photo.filename}
-										config={photo.config ?? {}}
-									/>
-									<div className="mt-2 flex items-center justify-between">
-										<span className="text-sm">{photo.filename}</span>
+									<div
+										className="relative aspect-[4/3] w-full overflow-hidden rounded-lg cursor-zoom-in"
+										onClick={() => onOpenFullScreen(photo)}
+									>
+										<motion.div
+											layoutId={`photo-${photo.id}`}
+											className="size-full"
+										>
+											<PhotoComponent
+												src={photo.base64}
+												alt={photo.filename}
+												config={photo.config ?? {}}
+												className="transition-transform duration-500 group-hover:scale-105"
+											/>
+										</motion.div>
+										{isPrimary && (
+											<div className="absolute top-2 right-2 bg-primary text-primary-foreground p-1 rounded-full shadow-lg">
+												<CheckCircle2Icon className="h-4 w-4" />
+											</div>
+										)}
+									</div>
+									<div className="flex flex-col gap-2">
+										<p className="truncate text-sm font-medium px-1" title={photo.filename}>
+											{photo.filename}
+										</p>
 										<Button
 											size="sm"
-											variant={isPrimary ? "default" : "outline"}
+											variant={isPrimary ? "default" : "secondary"}
+											className={twMerge(
+												"w-full h-8 text-xs font-semibold rounded-lg transition-all",
+												!isPrimary && "opacity-0 group-hover:opacity-100",
+											)}
 											onClick={() =>
 												handleSetStackPrimary(openStackId, photo.id)
 											}
 										>
-											{isPrimary ? "Primary" : "Set as primary"}
+											{isPrimary ? "Primary Image" : "Set as Primary"}
 										</Button>
 									</div>
-								</div>
+								</motion.div>
 							);
 						})}
 					</div>
 				</div>
-			</div>
+			</motion.div>
 		</div>
 	);
 }
