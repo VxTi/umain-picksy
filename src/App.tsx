@@ -1,4 +1,5 @@
 import { PhotoLibraryProvider } from "@/backend/photo-library-context";
+import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
@@ -9,18 +10,20 @@ import PhotoEditor from "./pages/photo-editor";
 
 function App() {
 	return (
-		<PhotoLibraryProvider>
-			<TooltipProvider delayDuration={0}>
-				<Toaster />
-				<BrowserRouter>
-					<Routes>
-						<Route path="/" element={<Home />} />
-						<Route path="/gallery" element={<ImageGallery />} />
-						<Route path="/edit" element={<PhotoEditor />} />
-					</Routes>
-				</BrowserRouter>
-			</TooltipProvider>
-		</PhotoLibraryProvider>
+		<ThemeProvider defaultTheme="system" storageKey="picksy-ui-theme">
+			<PhotoLibraryProvider>
+				<TooltipProvider delayDuration={0}>
+					<Toaster />
+					<BrowserRouter>
+						<Routes>
+							<Route path="/" element={<Home />} />
+							<Route path="/gallery" element={<ImageGallery />} />
+							<Route path="/edit" element={<PhotoEditor />} />
+						</Routes>
+					</BrowserRouter>
+				</TooltipProvider>
+			</PhotoLibraryProvider>
+		</ThemeProvider>
 	);
 }
 
