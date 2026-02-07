@@ -68,7 +68,9 @@ export default function StackPreview({
 							</p>
 						</div>
 						<div>
-							<h3 className="text-lg font-semibold leading-none">Photo Stack</h3>
+							<h3 className="text-lg font-semibold leading-none">
+								Photo Stack
+							</h3>
 							<p className="text-sm text-muted-foreground mt-1">
 								Manage and select the primary photo for this stack
 							</p>
@@ -126,7 +128,10 @@ export default function StackPreview({
 										)}
 									</div>
 									<div className="flex flex-col gap-2">
-										<p className="truncate text-sm font-medium px-1" title={photo.filename}>
+										<p
+											className="truncate text-sm font-medium px-1"
+											title={photo.filename}
+										>
 											{photo.filename}
 										</p>
 										<Button

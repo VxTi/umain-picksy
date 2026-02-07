@@ -4,7 +4,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { AppLocation } from "@/lib/app-locations";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { SaveIcon } from 'lucide-react';
+import { SaveIcon } from "lucide-react";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";

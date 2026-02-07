@@ -117,7 +117,7 @@ export default function Navigator({
 				/>
 
 				{showStackAction && (
-					<Button variant="outline"  className='h-8' onClick={onCreateStack}>
+					<Button variant="outline" className="h-8" onClick={onCreateStack}>
 						<StackIcon className="size-4" />
 						{stackActionLabel}
 					</Button>
