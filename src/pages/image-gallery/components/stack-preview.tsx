@@ -44,40 +44,37 @@ export default function StackPreview({
 
 	return (
 		<div className="fixed inset-0 z-40 flex items-center justify-center p-4 sm:p-6">
-			<motion.button
+			<motion.div
 				initial={{ opacity: 0 }}
 				animate={{ opacity: 1 }}
 				exit={{ opacity: 0 }}
-				type="button"
-				className="absolute inset-0 size-sm bg-black/60 backdrop-blur-sm"
-				onClick={() => setOpenStackId(null)}
-				aria-label="Close stack"
-			/>
+				className="fixed inset-0 bg-black/50 backdrop-blur-sm z-0"
+				/>
 			<motion.div
 				initial={{ opacity: 0, scale: 0.9, y: 20 }}
 				animate={{ opacity: 1, scale: 1, y: 0 }}
 				exit={{ opacity: 0, scale: 0.9, y: 20 }}
 				transition={{ type: "spring", damping: 25, stiffness: 300 }}
-				className="relative z-10 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl backdrop-blur-md shadow-2xl border border-white/10"
+				className="relative z-10 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl bg-background shadow-2xl border border-white/10"
 			>
 				<div className="flex items-center justify-between p-4 border-b border-border/50">
 					<div className="flex items-center gap-3">
-						<div className="bg-primary/10 p-2 rounded-lg">
-							<p className="text-primary font-bold text-lg leading-none">
-								{openStackPhotos.length}
-							</p>
-						</div>
 						<div>
+							<div>
 							<h3 className="text-lg font-semibold leading-none">
 								Photo Stack
 							</h3>
+							<p className="text-primary font-bold text-lg leading-none">
+								{openStackPhotos.length}
+							</p>
+							</div>
 							<p className="text-sm text-muted-foreground mt-1">
 								Manage and select the primary photo for this stack
 							</p>
 						</div>
 					</div>
 					<div className="flex items-center gap-3">
-						<span className="hidden sm:flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-[10px] font-medium text-muted-foreground bg-muted/30 uppercase tracking-wider">
+						<span className="hidden sm:flex items-center gap-1.5 rounded-full border border-border px-2.5 py-1 text-xs font-mono text-muted-foreground bg-muted/30 uppercase tracking-wider">
 							ESC to close
 						</span>
 						<button
