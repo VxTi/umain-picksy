@@ -92,7 +92,7 @@ function SaveEditsButton({
 			className="flex items-center gap-1 rounded-full py-1! font-semibold shadow-lg transition-all text-white! bg-blue-400! hover:bg-blue-100 border border-blue-400"
 		>
 			<SaveIcon className="size-4" />
-			<span className="text-white!"> Save edits</span>
+			<span className="text-white!"> Save changes</span>
 		</button>
 	);
 }

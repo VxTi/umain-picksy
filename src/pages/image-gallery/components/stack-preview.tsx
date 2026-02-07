@@ -2,7 +2,9 @@ import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Photo } from "@/backend/schemas";
 import { Button } from "@/components/ui/button";
 import { PhotoComponent } from "@/components/photo-component";
-import { XIcon, HeartIcon } from "lucide-react";
+import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
+import { openEditWindow } from "@/lib/windows";
+import { XIcon, HeartIcon, PencilIcon } from "lucide-react";
 import React, { useMemo } from "react";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
@@ -12,14 +14,12 @@ interface StackPreviewProps {
 	openStackId: string | null;
 	setOpenStackId: React.Dispatch<React.SetStateAction<string | null>>;
 	openStackPhotos: Readonly<Photo[]>;
-	onOpenFullScreen: (photo: Photo) => void;
 }
 
 export default function StackPreview({
 	openStackId,
 	setOpenStackId,
 	openStackPhotos,
-	onOpenFullScreen,
 }: StackPreviewProps) {
 	const { setStackPrimary } = usePhotoLibrary();
 
@@ -49,7 +49,7 @@ export default function StackPreview({
 				animate={{ opacity: 1 }}
 				exit={{ opacity: 0 }}
 				type="button"
-				className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+				className="absolute inset-0 size-sm bg-black/60 backdrop-blur-sm"
 				onClick={() => setOpenStackId(null)}
 				aria-label="Close stack"
 			/>
@@ -58,7 +58,7 @@ export default function StackPreview({
 				animate={{ opacity: 1, scale: 1, y: 0 }}
 				exit={{ opacity: 0, scale: 0.9, y: 20 }}
 				transition={{ type: "spring", damping: 25, stiffness: 300 }}
-				className="relative z-10 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl bg-background/95 backdrop-blur-md shadow-2xl border border-white/10"
+				className="relative z-10 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl backdrop-blur-md shadow-2xl border border-white/10"
 			>
 				<div className="flex items-center justify-between p-4 border-b border-border/50">
 					<div className="flex items-center gap-3">
@@ -95,10 +95,10 @@ export default function StackPreview({
 					<div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
 						{openStackPhotos.map((photo) => (
 							<StackPreviewItem
+								key={`stack-preview-entry-${photo.id}`}
 								photo={photo}
 								isPrimary={photo.id === openStackPrimaryId}
 								handleSetStackPrimary={handleSetStackPrimary}
-								onOpenFullScreen={onOpenFullScreen}
 								openStackId={openStackId}
 							/>
 						))}
@@ -112,14 +112,12 @@ export default function StackPreview({
 function StackPreviewItem({
 	photo,
 	isPrimary,
-	onOpenFullScreen,
 	handleSetStackPrimary,
 	openStackId,
 }: {
 	photo: Photo;
 	isPrimary: boolean;
 	handleSetStackPrimary: (stackId: string, primaryId: string) => void;
-	onOpenFullScreen: (photo: Photo) => void;
 	openStackId: string;
 }) {
 	return (
@@ -132,10 +130,7 @@ function StackPreviewItem({
 					: "bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border",
 			)}
 		>
-			<div
-				className="relative aspect-4/3 w-full overflow-hidden rounded-lg cursor-zoom-in"
-				onClick={() => onOpenFullScreen(photo)}
-			>
+			<div className="relative aspect-4/3 w-full overflow-hidden rounded-lg cursor-zoom-in">
 				<motion.div key={`stack-photo-${photo.id}`} className="size-full">
 					<PhotoComponent
 						src={photo.base64}
@@ -145,10 +140,18 @@ function StackPreviewItem({
 					/>
 				</motion.div>
 				{isPrimary && (
-					<div className="absolute bg-red-500 top-2 right-2 text-primary-foreground p-1.5 rounded-full shadow-lg">
+					<div className="absolute bg-red-500 top-0 right-2 text-primary-foreground p-1.5 rounded-full shadow-lg">
 						<HeartIcon className="size-4  fill-white" />
 					</div>
 				)}
+				<ButtonWithTooltip
+					size="icon-sm"
+					className="absolute top-0 left-2 p-1! rounded-full!"
+					tooltip="Edit image"
+					onClick={() => openEditWindow([photo])}
+				>
+					<PencilIcon />
+				</ButtonWithTooltip>
 			</div>
 			<div className="flex flex-col gap-2">
 				<p className="truncate text-sm font-medium px-1" title={photo.filename}>

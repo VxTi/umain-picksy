@@ -326,7 +326,6 @@ export default function ImageGallery() {
 						openStackId={openStackId}
 						setOpenStackId={setOpenStackId}
 						openStackPhotos={openStackPhotos}
-						onOpenFullScreen={setFullScreenPhoto}
 					/>
 				)}
 			</AnimatePresence>
