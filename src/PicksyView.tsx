@@ -31,7 +31,10 @@ export default function PicksyView({
 			onMouseDown={() => getCurrentWindow().startDragging()}
 			className="h-full flex items-center justify-center bg-background"
 		>
-			<Card className="w-105 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
+			<Card
+				className="w-105 shadow-xl"
+				onMouseDown={(e) => e.stopPropagation()}
+			>
 				<CardContent className="flex flex-col items-center gap-6 p-8">
 					<div className="w-100 h-100 rounded-xl flex items-center justify-center text-sm text-muted-foreground">
 						<img

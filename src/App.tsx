@@ -3,8 +3,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
-import Home from "./pages/Home";
-import Gallery from "./pages/Gallery";
+import Home from "./pages/home";
+import ImageGallery from "./pages/image-gallery";
 import PhotoEditor from "./pages/photo-editor";
 
 function App() {
@@ -15,7 +15,7 @@ function App() {
 				<BrowserRouter>
 					<Routes>
 						<Route path="/" element={<Home />} />
-						<Route path="/gallery" element={<Gallery />} />
+						<Route path="/gallery" element={<ImageGallery />} />
 						<Route path="/edit" element={<PhotoEditor />} />
 					</Routes>
 				</BrowserRouter>

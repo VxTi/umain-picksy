@@ -10,7 +10,7 @@ import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
 import PhotoEditorSidebar from "../components/photo-editor-sidebar";
-import { PhotoComponent } from "./PhotoComponent";
+import { PhotoComponent } from "./photo-component";
 
 function PhotoEditor() {
 	const { saveImageConfig } = usePhotoLibrary();

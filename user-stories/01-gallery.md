@@ -1,4 +1,4 @@
-# Gallery
+# ImageGallery
 
 ## US-1.1 Select source folder
 **As a** user  

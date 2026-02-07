@@ -4,7 +4,7 @@ Photo management app: gallery, stacks, grouping, optional ML (face/object), undo
 
 | Area | File |
 |------|------|
-| Gallery | [01-gallery.md](01-gallery.md) |
+| ImageGallery | [01-gallery.md](01-gallery.md) |
 | Stack picking | [02-stack-picking.md](02-stack-picking.md) |
 | Grouping by content | [03-grouping-content.md](03-grouping-content.md) |
 | Grouping by time | [04-grouping-time.md](04-grouping-time.md) |

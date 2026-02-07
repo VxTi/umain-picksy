@@ -14,7 +14,7 @@
 **So that** that photo is shown in the gallery and the rest are de‑emphasized or hidden by default.
 
 - In stack view: select “Set as top” for one photo.
-- Gallery shows top photo; others accessible via “expand stack”.
+- ImageGallery shows top photo; others accessible via “expand stack”.
 
 ## US-2.3 Reorder or change top
 **As a** user  

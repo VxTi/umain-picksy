@@ -1,11 +1,11 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Spinner } from "@/components/ui/spinner";
 import { EventType } from "@/lib/events";
-import { PhotoComponent } from "@/pages/PhotoComponent";
+import { PhotoComponent } from "@/pages/photo-component";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { PencilIcon, StarIcon, Trash2Icon, XIcon } from "lucide-react";
+import { HeartIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,7 @@ interface PresencePayload {
 	remote_peers: PresencePeer[];
 }
 
-export default function Gallery() {
+export default function ImageGallery() {
 	const { photos, loading, setPhotoStack, setStackPrimary, clearPhotoStack } =
 		usePhotoLibrary();
 
@@ -371,20 +371,20 @@ export default function Gallery() {
 							<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
 								ESC
 							</span>
-              <ButtonWithTooltip
-                variant="ghost"
-                size="icon-xs"
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setFullScreenPhoto(null);
-                }}
-                aria-label="Close full screen"
-                className="text-white/80 transition-colors hover:text-white"
-                tooltip="Close full screen"
-              >
-                <XIcon className="h-5 w-5" />
-              </ButtonWithTooltip>
+							<ButtonWithTooltip
+								variant="ghost"
+								size="icon-xs"
+								type="button"
+								onClick={(event) => {
+									event.stopPropagation();
+									setFullScreenPhoto(null);
+								}}
+								aria-label="Close full screen"
+								className="text-white/80 transition-colors hover:text-white"
+								tooltip="Close full screen"
+							>
+								<XIcon className="h-5 w-5" />
+							</ButtonWithTooltip>
 						</div>
 						<PhotoComponent
 							src={fullScreenPhoto.base64}
@@ -401,33 +401,6 @@ export default function Gallery() {
 						className="absolute inset-0 bg-black/80"
 						onClick={() => setOpenStackId(null)}
 						aria-label="Close stack"
-				<div
-					className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6"
-					onClick={() => setFullScreenPhoto(null)}
-				>
-					<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80">
-						<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
-							ESC
-						</span>
-						<ButtonWithTooltip
-							variant="ghost"
-							size="icon-xs"
-							type="button"
-							onClick={(event) => {
-								event.stopPropagation();
-								setFullScreenPhoto(null);
-							}}
-							aria-label="Close full screen"
-							className="text-white/80 transition-colors hover:text-white"
-							tooltip="Close full screen"
-						>
-							<XIcon className="h-5 w-5" />
-						</ButtonWithTooltip>
-					</div>
-					<img
-						src={fullScreenPhoto.base64}
-						alt={fullScreenPhoto.filename}
-						className="max-h-full max-w-full object-contain"
 					/>
 					<div className="relative z-10 flex h-full items-center justify-center p-6">
 						<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80">
@@ -655,13 +628,6 @@ function GalleryNavigationBar({
 						{stackActionLabel}
 					</Button>
 				)}
-				<Button
-					onClick={handleEditClick}
-					disabled={selectedImages.length === 0}
-				>
-					<PencilIcon />
-					Edit Selected
-				</Button>
 				{showPeers && <ActiveUsers presence={presence} />}
 				<div className="flex items-center gap-2">
 					<ButtonWithTooltip
@@ -682,7 +648,7 @@ function GalleryNavigationBar({
 						tooltip="Add to favorites"
 						onMouseDown={(e) => e.stopPropagation()}
 					>
-						<StarIcon className="size-4" />
+						<HeartIcon className="size-4" />
 					</ButtonWithTooltip>
 					<ButtonWithTooltip
 						variant="ghost"
@@ -826,15 +792,25 @@ function AlbumPhoto({
 			data-photo-id={image.id}
 			onClick={(event) => {
 				// Prevent double trigger if clicking internal buttons
-				if (event.target === event.currentTarget || (event.target instanceof HTMLElement && !event.target.closest("button"))) {
-					handleImageClick(event as unknown as MouseEvent<HTMLButtonElement>, image);
+				if (
+					event.target === event.currentTarget ||
+					(event.target instanceof HTMLElement &&
+						!event.target.closest("button"))
+				) {
+					handleImageClick(
+						event as unknown as MouseEvent<HTMLButtonElement>,
+						image,
+					);
 				}
 			}}
 			onDoubleClick={() => onOpenFullScreen(image)}
 			onKeyDown={(event) => {
 				if (event.key === "Enter" || event.key === " ") {
 					event.preventDefault();
-					handleImageClick(event as unknown as MouseEvent<HTMLButtonElement>, image);
+					handleImageClick(
+						event as unknown as MouseEvent<HTMLButtonElement>,
+						image,
+					);
 				}
 			}}
 			onFocus={() => setActivePhotoId(image.id)}
@@ -859,6 +835,7 @@ function AlbumPhoto({
 				src={image.base64}
 				alt={image.filename}
 				config={image.config ?? {}}
+				className="shadow-sm shadow-black"
 			/>
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
@@ -880,7 +857,7 @@ function AlbumPhoto({
 				)}
 				tooltip={isFavorite ? "Remove from favorites" : "Mark as favorite"}
 			>
-				<StarIcon
+				<HeartIcon
 					className="h-4 w-4"
 					fill={isFavorite ? "currentColor" : "none"}
 				/>
@@ -893,17 +870,17 @@ function AlbumPhoto({
 				</div>
 			)}
 			{image.stack_id && stackSize > 1 && (
-				<button
+				<Button
 					type="button"
 					onClick={(event) => {
 						event.preventDefault();
 						event.stopPropagation();
 						onOpenStack(image.stack_id ?? "");
 					}}
-					className="absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-1 text-xs text-white"
+					className="absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5! py-0.5! text-xs text-white"
 				>
 					Stack ({stackSize})
-				</button>
+				</Button>
 			)}
 		</div>
 	);

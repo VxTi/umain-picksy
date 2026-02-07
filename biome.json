@@ -22,7 +22,10 @@
 		"enabled": true,
 		"includes": ["**"],
 		"rules": {
-			"recommended": true
+			"recommended": true,
+			"style": {
+
+			}
 		}
 	},
 	"javascript": {

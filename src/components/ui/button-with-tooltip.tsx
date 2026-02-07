@@ -1,26 +1,36 @@
 import * as React from "react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 
 interface ButtonWithTooltipProps extends React.ComponentProps<typeof Button> {
 	tooltip?: React.ReactNode;
 }
 
-export function ButtonWithTooltip({
-	tooltip,
-	children,
-	...props
-}: ButtonWithTooltipProps) {
+export const ButtonWithTooltip = React.forwardRef<
+	HTMLButtonElement,
+	ButtonWithTooltipProps
+>(({ tooltip, children, ...props }, ref) => {
 	if (!tooltip) {
-		return <Button {...props}>{children}</Button>;
+		return (
+			<Button ref={ref} {...props}>
+				{children}
+			</Button>
+		);
 	}
 
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<Button {...props}>{children}</Button>
+				<Button ref={ref} {...props}>
+					{children}
+				</Button>
 			</TooltipTrigger>
 			<TooltipContent>{tooltip}</TooltipContent>
 		</Tooltip>
 	);
-}
+});
+ButtonWithTooltip.displayName = "ButtonWithTooltip";
