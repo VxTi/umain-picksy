@@ -2,10 +2,10 @@ import { PhotoLibraryProvider } from "@/backend/photo-library-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AppLocation } from "@/lib/app-locations";
+import ImageGallery from "@/pages/image-gallery";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./App.css";
-import Home from "./pages/home";
-import ImageGallery from "./pages/image-gallery";
 import PhotoEditor from "./pages/photo-editor";
 
 function App() {
@@ -16,9 +16,8 @@ function App() {
 					<Toaster />
 					<BrowserRouter>
 						<Routes>
-							<Route path="/" element={<Home />} />
-							<Route path="/gallery" element={<ImageGallery />} />
-							<Route path="/edit" element={<PhotoEditor />} />
+							<Route path={AppLocation.HOME} element={<ImageGallery />} />
+							<Route path={AppLocation.EDITOR} element={<PhotoEditor />} />
 						</Routes>
 					</BrowserRouter>
 				</TooltipProvider>

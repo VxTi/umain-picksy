@@ -14,7 +14,7 @@ export const ButtonWithTooltip = React.forwardRef<
 	HTMLButtonElement,
 	ButtonWithTooltipProps
 >(({ tooltip, children, ...props }, ref) => {
-	if (!tooltip) {
+	if (!tooltip || typeof tooltip !== "string" || !tooltip.trim().length) {
 		return (
 			<Button ref={ref} {...props}>
 				{children}

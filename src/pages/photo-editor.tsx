@@ -1,5 +1,6 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Photo, PhotoConfig } from "@/backend/schemas";
+import { AppLocation } from "@/lib/app-locations";
 import { EventType } from "@/lib/events";
 import { SaveIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -79,7 +80,7 @@ function PhotoEditor() {
 						{!hasEditablePhotos && (
 							<ButtonWithTooltip
 								variant="outline"
-								onClick={() => navigate("/gallery")}
+								onClick={() => navigate(AppLocation.HOME)}
 								onMouseDown={(e) => e.stopPropagation()}
 								tooltip="Return to the gallery view"
 							>

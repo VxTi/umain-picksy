@@ -6,7 +6,9 @@ import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
+	FolderPlusIcon,
 	HeartIcon,
+	ImagePlusIcon,
 	Layers2Icon,
 	LayersIcon,
 	LayersPlusIcon,
@@ -16,7 +18,7 @@ import {
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonProps } from "@/components/ui/button";
 import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
@@ -35,7 +37,7 @@ interface PresencePayload {
 }
 
 export default function ImageGallery() {
-	const { photos, loading, setPhotoStack, setStackPrimary, clearPhotoStack } =
+	const { photos, setPhotoStack, setStackPrimary, clearPhotoStack } =
 		usePhotoLibrary();
 
 	const [authorFilter, setAuthorFilter] = useState("all");
@@ -295,13 +297,6 @@ export default function ImageGallery() {
 					showStackAction={showStackAction}
 					stackIcon={stackIcon}
 				/>
-
-				{loading && (
-					<p className="text-center text-muted-foreground">
-						<Spinner />
-						Loading photos...
-					</p>
-				)}
 				<div className="px-2">
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 						{displayPhotos.map((image) => (
@@ -456,10 +451,9 @@ function GalleryNavigationBar({
 	onCreateStack: () => void;
 	stackActionLabel: string;
 	showStackAction: boolean;
-	stackIcon: React.ComponentType<{ className?: string}>;
+	stackIcon: React.ComponentType<{ className?: string }>;
 }) {
-	const { photos, removePhotoFromLibrary, setPhotos, setPhotosFavorite } =
-		usePhotoLibrary();
+	const { photos, loading, setPhotos, setPhotosFavorite } = usePhotoLibrary();
 
 	const [presence, setPresence] = useState<PresencePayload | null>(null);
 	const [showPeers, setShowPeers] = useState(false);
@@ -506,6 +500,117 @@ function GalleryNavigationBar({
 		}
 	};
 
+	return (
+		<div
+			onMouseDown={() => getCurrentWindow().startDragging()}
+			className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 px-3 py-4"
+		>
+			<p className="text-sm mt-2 text-muted-foreground select-none pointer-events-none">
+				Click to select, Shift-click for multi-select ({selectedImages.length}{" "}
+				selected)
+			</p>
+			<div className="relative flex items-center gap-2 text-sm! *:px-2!">
+				{loading && <Spinner />}
+				<ThemeToggle />
+				<FilterImagesByAuthor
+					photos={photos}
+					presence={presence}
+					authorFilter={authorFilter}
+					setAuthorFilter={setAuthorFilter}
+				/>
+				<OnlineUsersStatus
+					presence={presence}
+					setShowPeers={setShowPeers}
+					setPinnedPeers={setPinnedPeers}
+					pinnedPeers={pinnedPeers}
+				/>
+
+				{showStackAction && (
+					<Button variant="outline" onClick={onCreateStack}>
+						<StackIcon className="size-4" />
+						{stackActionLabel}
+					</Button>
+				)}
+				{showPeers && <ActiveUsers presence={presence} />}
+
+				<DotSeparator />
+
+				<div className="flex items-center gap-2">
+					<HeaderMenuButton
+						onClick={handleEditClick}
+						disabled={selectedImages.length === 0}
+						tooltip="Edit selected"
+						onMouseDown={(e) => e.stopPropagation()}
+					>
+						<PencilIcon className="size-4" />
+					</HeaderMenuButton>
+					<HeaderMenuButton
+						onClick={handleFavoriteClick}
+						disabled={selectedImages.length === 0}
+						className={twMerge(
+							"text-muted-foreground hover:bg-yellow-500/10",
+							allFavorited
+								? "text-yellow-500 hover:text-yellow-600"
+								: "hover:text-yellow-500",
+						)}
+						tooltip={
+							isAnyNotFavorited ? "Add to favorites" : "Remove from favorites"
+						}
+						onMouseDown={(e) => e.stopPropagation()}
+					>
+						<HeartIcon
+							className={twMerge("size-4", allFavorited && "fill-current")}
+						/>
+					</HeaderMenuButton>
+					<DeleteSelectionButton selectedImages={selectedImages} />
+
+					<DotSeparator />
+
+					<AddImagesFolderButton />
+					<AddImagesButton />
+				</div>
+				{showPeers && presence && <ActiveUsers presence={presence} />}
+			</div>
+		</div>
+	);
+}
+
+function DotSeparator() {
+	return <div className="mx-2 grow-0 bg-foreground/50 rounded-full p-0.5!" />;
+}
+
+function AddImagesFolderButton() {
+	const { addPhotosFromFolder } = usePhotoLibrary();
+
+	return (
+		<HeaderMenuButton
+			tooltip="Add images from a folder on your device"
+			onClick={addPhotosFromFolder}
+		>
+			<FolderPlusIcon className="size-4" />
+		</HeaderMenuButton>
+	);
+}
+
+function AddImagesButton() {
+	const { addPhotosToLibrary } = usePhotoLibrary();
+
+	return (
+		<HeaderMenuButton
+			tooltip="Add images from your device"
+			onClick={addPhotosToLibrary}
+		>
+			<ImagePlusIcon className="size-4" />
+		</HeaderMenuButton>
+	);
+}
+
+function DeleteSelectionButton({
+	selectedImages,
+}: {
+	selectedImages: Readonly<Photo[]>;
+}) {
+	const { removePhotoFromLibrary } = usePhotoLibrary();
 	const handleDeleteClick = async () => {
 		if (selectedImages.length === 0) return;
 
@@ -529,117 +634,72 @@ function GalleryNavigationBar({
 		}
 	};
 
+	return (
+		<HeaderMenuButton
+			onClick={handleDeleteClick}
+			disabled={selectedImages.length === 0}
+			className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+			tooltip="Delete selected"
+			onMouseDown={(e) => e.stopPropagation()}
+		>
+			<Trash2Icon className="size-4" />
+		</HeaderMenuButton>
+	);
+}
+
+function OnlineUsersStatus({
+	presence,
+	pinnedPeers,
+	setShowPeers,
+	setPinnedPeers,
+}: {
+	presence: PresencePayload | null;
+	pinnedPeers: boolean;
+	setPinnedPeers: Dispatch<SetStateAction<boolean>>;
+	setShowPeers: Dispatch<SetStateAction<boolean>>;
+}) {
 	const onlineCount = presence?.remote_peers.length ?? 0;
 	const onlineLabel = onlineCount > 0 ? `${onlineCount + 1} online` : "Offline";
 
 	return (
-		<div
-			onMouseDown={() => getCurrentWindow().startDragging()}
-			className="flex items-center justify-between mb-4 sticky top-0 bg-background z-10 px-3 py-4"
+		<Button
+			variant="outline"
+			className="h-8"
+			onMouseEnter={() => setShowPeers(true)}
+			onMouseLeave={() => {
+				if (!pinnedPeers) {
+					setShowPeers(false);
+				}
+			}}
+			onClick={() => {
+				setPinnedPeers((prev) => {
+					const next = !prev;
+					setShowPeers(next);
+					return next;
+				});
+			}}
 		>
-			<p className="text-sm text-muted-foreground select-none pointer-events-none">
-				Click to select, Shift-click for multi-select ({selectedImages.length}{" "}
-				selected)
-			</p>
-			<div className="relative flex items-center gap-2 text-sm! *:px-2!">
-				<ThemeToggle />
-				<FilterUsers
-					photos={photos}
-					presence={presence}
-					authorFilter={authorFilter}
-					setAuthorFilter={setAuthorFilter}
-				/>
-				<Button
-					variant="outline"
-					onMouseEnter={() => setShowPeers(true)}
-					onMouseLeave={() => {
-						if (!pinnedPeers) {
-							setShowPeers(false);
-						}
-					}}
-					onClick={() => {
-						setPinnedPeers((prev) => {
-							const next = !prev;
-							setShowPeers(next);
-							return next;
-						});
-					}}
-				>
-					<span
-						className={twMerge(
-							"inline-block h-2 w-2 rounded-full",
-							onlineCount > 0
-								? "bg-emerald-500 ring-0 transition-all duration-200 "
-								: "bg-red-500",
-						)}
-					/>
-					<span
-						key={onlineLabel}
-						className="animate-in fade-in slide-in-from-top-1 bg-muted/50 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground cursor-help"
-						title="Online peers"
-						onMouseDown={(e) => e.stopPropagation()}
-					>
-						{onlineLabel}
-					</span>
-				</Button>
-				{showStackAction && (
-					<Button variant="outline" onClick={onCreateStack}>
-						<StackIcon className="size-4" />
-						{stackActionLabel}
-					</Button>
+			<span
+				className={twMerge(
+					"inline-block h-2 w-2 rounded-full",
+					onlineCount > 0
+						? "bg-emerald-500 ring-0 transition-all duration-200 "
+						: "bg-red-500",
 				)}
-				{showPeers && <ActiveUsers presence={presence} />}
-				<div className="flex items-center gap-2">
-					<ButtonWithTooltip
-						variant="ghost"
-						size="icon-sm"
-						onClick={handleEditClick}
-						disabled={selectedImages.length === 0}
-						className="text-muted-foreground hover:text-foreground"
-						tooltip="Edit selected"
-						onMouseDown={(e) => e.stopPropagation()}
-					>
-						<PencilIcon className="size-4" />
-					</ButtonWithTooltip>
-					<ButtonWithTooltip
-						variant="ghost"
-						size="icon-sm"
-						onClick={handleFavoriteClick}
-						disabled={selectedImages.length === 0}
-						className={twMerge(
-							"text-muted-foreground hover:bg-yellow-500/10",
-							allFavorited
-								? "text-yellow-500 hover:text-yellow-600"
-								: "hover:text-yellow-500",
-						)}
-						tooltip={
-							isAnyNotFavorited ? "Add to favorites" : "Remove from favorites"
-						}
-						onMouseDown={(e) => e.stopPropagation()}
-					>
-						<HeartIcon
-							className={twMerge("size-4", allFavorited && "fill-current")}
-						/>
-					</ButtonWithTooltip>
-					<ButtonWithTooltip
-						variant="ghost"
-						size="icon-sm"
-						onClick={handleDeleteClick}
-						disabled={selectedImages.length === 0}
-						className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-						tooltip="Delete selected"
-						onMouseDown={(e) => e.stopPropagation()}
-					>
-						<Trash2Icon className="size-4" />
-					</ButtonWithTooltip>
-				</div>
-				{showPeers && presence && <ActiveUsers presence={presence} />}
-			</div>
-		</div>
+			/>
+			<span
+				key={onlineLabel}
+				className="animate-in fade-in slide-in-from-top-1 bg-muted/50 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-foreground cursor-help"
+				title="Online peers"
+				onMouseDown={(e) => e.stopPropagation()}
+			>
+				{onlineLabel}
+			</span>
+		</Button>
 	);
 }
 
-function FilterUsers({
+function FilterImagesByAuthor({
 	photos,
 	presence,
 	authorFilter,
@@ -671,7 +731,7 @@ function FilterUsers({
 
 	return (
 		<select
-			className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+			className="h-8 rounded-md border border-input bg-background px-3 text-sm"
 			value={authorFilter}
 			onChange={(event) => setAuthorFilter(event.target.value)}
 		>
@@ -897,5 +957,22 @@ function ActiveUsers({ presence }: { presence: PresencePayload | null }) {
 				)}
 			</div>
 		</div>
+	);
+}
+
+function HeaderMenuButton({
+	className,
+	...props
+}: ButtonProps & { tooltip: string }) {
+	return (
+		<ButtonWithTooltip
+			variant="ghost"
+			size="icon-sm"
+			className={twMerge(
+				"*:size-4 text-muted-foreground hover:text-foreground",
+				className,
+			)}
+			{...props}
+		/>
 	);
 }
