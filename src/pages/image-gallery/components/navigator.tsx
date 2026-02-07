@@ -67,7 +67,24 @@ export default function Navigator({
 
 	const handleEditClick = () => {
 		if (selectedImages.length > 0) {
-			void openEditWindow(selectedImages);
+			const imagesToEdit = new Map<string, Photo>();
+
+			for (const selected of selectedImages) {
+				if (selected.stack_id) {
+					// If the image is part of a stack, include all images from that stack
+					const stackImages = photos.filter(
+						(p) => p.stack_id === selected.stack_id,
+					);
+					for (const img of stackImages) {
+						imagesToEdit.set(img.id, img);
+					}
+				} else {
+					// If not part of a stack, just include the selected image
+					imagesToEdit.set(selected.id, selected);
+				}
+			}
+
+			void openEditWindow(Array.from(imagesToEdit.values()));
 		}
 	};
 

@@ -174,7 +174,6 @@ export default function ImageGallery() {
 		let cancelled = false;
 		setFullScreenSrc(null);
 
-		console.log("no full res attachment for", fullScreenPhoto.id);
 		if (!fullScreenPhoto.full_res_attachment) {
 			console.log("no full res attachment for", fullScreenPhoto.id);
 			return () => {

@@ -191,7 +191,8 @@ function PhotoActions({
 	onDelete?: () => void;
 }) {
 	const [isFavorite, setIsFavorite] = useState(photo.favorite);
-	const { setPhotoFavorite, removePhotoFromLibrary } = usePhotoLibrary();
+	const { photos, setPhotoFavorite, removePhotoFromLibrary } =
+		usePhotoLibrary();
 	return (
 		<div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 pointer-events-auto">
 			<motion.div
@@ -233,7 +234,14 @@ function PhotoActions({
 						className="border-transparent! hover:bg-accent/10 text-accent-foreground bg-transparent!"
 						onClick={(e) => {
 							e.stopPropagation();
-							void openEditWindow([photo]);
+							if (photo.stack_id) {
+								const stackImages = photos.filter(
+									(p) => p.stack_id === photo.stack_id,
+								);
+								void openEditWindow(stackImages);
+							} else {
+								void openEditWindow([photo]);
+							}
 						}}
 					>
 						<PencilIcon />

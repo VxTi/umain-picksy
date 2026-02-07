@@ -60,13 +60,13 @@ export default function StackPreview({
 				<div className="flex items-center justify-between p-4 border-b border-border/50">
 					<div className="flex items-center gap-3">
 						<div>
-							<div className='flex items-center gap-3'>
+							<div className="flex items-center gap-3">
 								<h3 className="text-lg font-semibold leading-none">
 									Photo Stack
 								</h3>
 								<span className="text-primary font-bold text-sm leading-none bg-accent/10 font-mono">
-									{openStackPhotos.length}{" "}
-									item{openStackPhotos.length !== 1 && "s"}
+									{openStackPhotos.length} item
+									{openStackPhotos.length !== 1 && "s"}
 								</span>
 							</div>
 							<p className="text-sm text-muted-foreground mt-1">
@@ -118,6 +118,7 @@ function StackPreviewItem({
 	handleSetStackPrimary: (stackId: string, primaryId: string) => void;
 	openStackId: string;
 }) {
+	const { photos } = usePhotoLibrary();
 	return (
 		<motion.div
 			key={`stack-${photo.id}`}
@@ -146,7 +147,16 @@ function StackPreviewItem({
 					size="icon-sm"
 					className="absolute top-0 left-2 p-1! rounded-full!"
 					tooltip="Edit image"
-					onClick={() => openEditWindow([photo])}
+					onClick={() => {
+						if (photo.stack_id) {
+							const stackImages = photos.filter(
+								(p) => p.stack_id === photo.stack_id,
+							);
+							void openEditWindow(stackImages);
+						} else {
+							void openEditWindow([photo]);
+						}
+					}}
 				>
 					<PencilIcon />
 				</ButtonWithTooltip>
