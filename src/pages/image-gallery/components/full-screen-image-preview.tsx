@@ -30,13 +30,11 @@ export default function FullScreenImagePreview({
 				onClick={() => setFullScreenPhoto(null)}
 				aria-label="Close full screen"
 			/>
-			<div className="relative z-10 flex h-full items-center justify-center p-6 pointer-events-none">
+			<div className="relative z-10 flex h-full items-center justify-center pointer-events-none">
 				<motion.div
-					initial={{ scale: 0.9, opacity: 0 }}
-					animate={{ scale: 1, opacity: 1 }}
-					exit={{ scale: 0.9, opacity: 0 }}
-					transition={{ type: "spring", damping: 25, stiffness: 300 }}
-					className="relative flex items-center justify-center pointer-events-auto size-full"
+					layoutId={`photo-${fullScreenPhoto.id}`}
+					transition={{ type: "spring", damping: 30, stiffness: 300 }}
+					className="relative flex items-center justify-center pointer-events-auto w-full h-full max-w-full max-h-full"
 				>
 					<div className="absolute right-4 top-4 flex items-center gap-2 text-white/80 z-20">
 						<span className="rounded border border-white/30 px-2 py-0.5 text-xs">
@@ -61,7 +59,7 @@ export default function FullScreenImagePreview({
 						src={fullScreenSrc ?? fullScreenPhoto.base64}
 						alt={fullScreenPhoto.filename}
 						config={fullScreenPhoto.config ?? {}}
-						className="size-full"
+						className="max-w-full max-h-[90vh]"
 					/>
 				</motion.div>
 			</div>

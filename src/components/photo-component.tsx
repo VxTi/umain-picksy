@@ -70,7 +70,7 @@ export function PhotoComponent({
 			<img
 				src={src}
 				alt={alt}
-				className="size-3/4 object-contain block"
+				className="size-full object-contain block"
 				style={{ filter, transform }}
 			/>
 		</div>

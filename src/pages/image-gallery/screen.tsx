@@ -15,7 +15,7 @@ import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import type { Photo } from "@/backend/commandStream";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function ImageGallery() {
 	const { photos, setPhotoStack, clearPhotoStack, getFullResAttachment } =
@@ -439,12 +439,13 @@ function AlbumPhoto({
 					: "border-transparent hover:border-muted-foreground/50",
 			)}
 		>
-			<PhotoComponent
-				src={image.base64}
-				alt={image.filename}
-				config={image.config ?? {}}
-				className="h-60"
-			/>
+			<motion.div layoutId={`photo-${image.id}`} className="h-60">
+				<PhotoComponent
+					src={image.base64}
+					alt={image.filename}
+					config={image.config ?? {}}
+				/>
+			</motion.div>
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
 			</div>
