@@ -63,7 +63,7 @@ export function PhotoComponent({
 	return (
 		<div
 			className={twMerge(
-				"overflow-hidden  size-full flex items-center justify-center border-dashed border-border border-2 rounded-sm",
+				"overflow-hidden  size-full flex items-center justify-center",
 				className,
 			)}
 			{...props}

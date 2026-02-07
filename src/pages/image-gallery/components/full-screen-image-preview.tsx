@@ -48,10 +48,6 @@ export default function FullScreenImagePreview({
 }: FullScreenImagePreviewProps) {
 	const [[page, direction], setPage] = useState([0, 0]);
 
-	// Reset direction when component mounts or photo changes externally
-	useEffect(() => {
-		setPage([0, 0]);
-	}, [setPage]);
 	const currentIndex = photos.findIndex((p) => p.id === photo.id);
 	const hasPrev = currentIndex > 0;
 	const hasNext = currentIndex < photos.length - 1;

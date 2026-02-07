@@ -60,13 +60,14 @@ export default function StackPreview({
 				<div className="flex items-center justify-between p-4 border-b border-border/50">
 					<div className="flex items-center gap-3">
 						<div>
-							<div>
+							<div className='flex items-center gap-3'>
 								<h3 className="text-lg font-semibold leading-none">
 									Photo Stack
 								</h3>
-								<p className="text-primary font-bold text-lg leading-none">
-									{openStackPhotos.length}
-								</p>
+								<span className="text-primary font-bold text-sm leading-none bg-accent/10 font-mono">
+									{openStackPhotos.length}{" "}
+									item{openStackPhotos.length !== 1 && "s"}
+								</span>
 							</div>
 							<p className="text-sm text-muted-foreground mt-1">
 								Manage and select the primary photo for this stack

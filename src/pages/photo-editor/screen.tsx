@@ -98,7 +98,7 @@ export default function PhotoEditor() {
 								config={photo.config ?? {}}
 								onClick={() => setActiveImageIndex(i)}
 								className={twMerge(
-									"transition-all duration-300",
+									"transition-all duration-300 border-dashed border-border border-2 rounded-sm",
 									editingPhotos.length > 1 && activeImageIndex !== i
 										? "opacity-50 scale-90"
 										: "opacity-100 scale-100",
