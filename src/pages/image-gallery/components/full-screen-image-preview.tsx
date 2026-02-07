@@ -1,8 +1,8 @@
 import { Photo } from "@/backend/schemas";
 import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
 import { PhotoComponent } from "@/components/photo-component";
-import { XIcon } from "lucide-react";
-import React from "react";
+import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import React, { useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 
 interface FullScreenImagePreviewProps {
@@ -11,12 +11,44 @@ interface FullScreenImagePreviewProps {
 		React.SetStateAction<Readonly<Photo> | null>
 	>;
 	fullScreenSrc: string | null;
+	photos: Readonly<Photo[]>;
 }
 export default function FullScreenImagePreview({
 	fullScreenPhoto,
 	setFullScreenPhoto,
 	fullScreenSrc,
+	photos,
 }: FullScreenImagePreviewProps) {
+	const currentIndex = photos.findIndex((p) => p.id === fullScreenPhoto.id);
+	const hasPrev = currentIndex > 0;
+	const hasNext = currentIndex < photos.length - 1;
+
+	const goToPrev = useCallback(() => {
+		if (hasPrev) {
+			setFullScreenPhoto(photos[currentIndex - 1]);
+		}
+	}, [currentIndex, hasPrev, photos, setFullScreenPhoto]);
+
+	const goToNext = useCallback(() => {
+		if (hasNext) {
+			setFullScreenPhoto(photos[currentIndex + 1]);
+		}
+	}, [currentIndex, hasNext, photos, setFullScreenPhoto]);
+
+	useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "ArrowLeft") {
+				event.preventDefault();
+				goToPrev();
+			} else if (event.key === "ArrowRight") {
+				event.preventDefault();
+				goToNext();
+			}
+		};
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [goToPrev, goToNext]);
+
 	return (
 		<motion.div
 			initial={{ opacity: 0 }}
@@ -31,6 +63,42 @@ export default function FullScreenImagePreview({
 				aria-label="Close full screen"
 			/>
 			<div className="relative z-10 flex h-full items-center justify-center pointer-events-none">
+				{/* Left navigation button */}
+				{hasPrev && (
+					<ButtonWithTooltip
+						variant="ghost"
+						size="icon"
+						type="button"
+						onClick={(event) => {
+							event.stopPropagation();
+							goToPrev();
+						}}
+						aria-label="Previous image"
+						className="absolute left-4 z-20 pointer-events-auto text-white/80 hover:text-white hover:bg-white/10 h-12 w-12"
+						tooltip="Previous image (←)"
+					>
+						<ChevronLeftIcon className="h-8 w-8" />
+					</ButtonWithTooltip>
+				)}
+
+				{/* Right navigation button */}
+				{hasNext && (
+					<ButtonWithTooltip
+						variant="ghost"
+						size="icon"
+						type="button"
+						onClick={(event) => {
+							event.stopPropagation();
+							goToNext();
+						}}
+						aria-label="Next image"
+						className="absolute right-4 z-20 pointer-events-auto text-white/80 hover:text-white hover:bg-white/10 h-12 w-12"
+						tooltip="Next image (→)"
+					>
+						<ChevronRightIcon className="h-8 w-8" />
+					</ButtonWithTooltip>
+				)}
+
 				<motion.div
 					layoutId={`photo-${fullScreenPhoto.id}`}
 					transition={{ type: "spring", damping: 30, stiffness: 300 }}
