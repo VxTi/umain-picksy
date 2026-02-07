@@ -1,4 +1,4 @@
-use crate::ditto_repo::{AppAction, DittoRepository, Photo, PhotoPayload};
+use crate::ditto_repo::{DittoRepository, Photo, PhotoPayload};
 use base64::{engine::general_purpose, Engine as _};
 use image::{DynamicImage, ImageFormat};
 use rexif::{ExifTag, TagValue};
@@ -236,6 +236,7 @@ fn process_image_file(path: String) -> Result<Photo, String> {
             .unwrap_or_else(|| path.clone()),
         image_path: path,
         base64: base64_content,
+        full_res_attachment: None,
         config: None,
         favorite: false,
         stack_id: None,
@@ -277,7 +278,7 @@ pub async fn add_photos_from_folder(
 
         let mut images: Vec<Photo> = Vec::new();
         let mut pending: Vec<Photo> = Vec::new();
-        let mut processed_count: usize = 0;
+        let mut _processed_count: usize = 0;
 
         for entry in WalkDir::new(&path_str).into_iter().filter_map(|e| e.ok()) {
             if entry.file_type().is_file() {
@@ -293,7 +294,7 @@ pub async fn add_photos_from_folder(
                         if let Ok(photo) = process_image_file(path) {
                             images.push(photo.clone());
                             pending.push(photo);
-                            processed_count += 1;
+                            _processed_count += 1;
                             if pending.len() >= UPSERT_BATCH_SIZE {
                                 let batch = std::mem::take(&mut pending);
                                 println!("Import: queueing batch of {} photos", batch.len());
@@ -452,4 +453,12 @@ pub async fn clear_photo_stack(
     args: ClearPhotoStackArgs,
 ) -> Result<(), String> {
     repo.clear_photo_stack(args.photo_ids).await
+}
+
+#[tauri::command]
+pub async fn get_full_res_attachment(
+    repo: State<'_, DittoRepository>,
+    id: String,
+) -> Result<Option<String>, String> {
+    repo.fetch_full_res_photo(&id).await
 }

@@ -62,11 +62,23 @@ export const PhotoConfig = Schema.Struct({
 	),
 });
 
+export const AttachmentTokenSchema = Schema.Struct({
+	id: Schema.String,
+	len: Schema.Number,
+	metadata: Schema.Record({
+		key: Schema.String,
+		value: Schema.String,
+	}),
+});
+
+export type AttachmentToken = Schema.Schema.Type<typeof AttachmentTokenSchema>;
+
 export const PhotoSchema = Schema.Struct({
 	base64: Schema.String,
 	id: Schema.String,
 	image_path: Schema.String,
 	filename: Schema.String,
+	full_res_attachment: Schema.optional(Schema.NullOr(AttachmentTokenSchema)),
 	sync_status: Schema.optional(Schema.NullOr(Schema.String)),
 	author_peer_id: Schema.optional(Schema.NullOr(Schema.String)),
 	config: Schema.optional(

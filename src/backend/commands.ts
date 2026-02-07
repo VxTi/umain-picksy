@@ -58,6 +58,12 @@ const ClearPhotoStackArgsSchema = Schema.Struct({
 	}),
 });
 
+const GetFullResAttachmentArgsSchema = Schema.Struct({
+	id: Schema.String,
+});
+
+const GetFullResAttachmentResultSchema = Schema.NullOr(Schema.String);
+
 export enum CommandType {
 	ADD_PHOTOS_FROM_FOLDER = "add_photos_from_folder",
 	CLEAR_LIBRARY = "clear_library",
@@ -70,6 +76,7 @@ export enum CommandType {
 	SET_PHOTO_STACK = "set_photo_stack",
 	SET_STACK_PRIMARY = "set_stack_primary",
 	CLEAR_PHOTO_STACK = "clear_photo_stack",
+	GET_FULL_RES_ATTACHMENT = "get_full_res_attachment",
 }
 
 export const CommandSchemas = {
@@ -117,6 +124,10 @@ export const CommandSchemas = {
 	[CommandType.CLEAR_PHOTO_STACK]: {
 		args: ClearPhotoStackArgsSchema,
 		result: EmptySchema,
+	},
+	[CommandType.GET_FULL_RES_ATTACHMENT]: {
+		args: GetFullResAttachmentArgsSchema,
+		result: GetFullResAttachmentResultSchema,
 	},
 } as const satisfies Record<string, CommandEntry>;
 

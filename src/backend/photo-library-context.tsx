@@ -45,6 +45,7 @@ export interface PhotoLibraryContextType {
 	clearPhotoStack: (
 		photoIds: string[],
 	) => Promise<Record<string, never> | null>;
+	getFullResAttachment: (id: string) => Promise<string | null>;
 }
 
 export const PhotoLibraryContext =
@@ -227,6 +228,11 @@ export function PhotoLibraryProvider({
 		[],
 	);
 
+	const getFullResAttachment = useCallbackEffect(
+		(id: string) => invoke(CommandType.GET_FULL_RES_ATTACHMENT, { id }),
+		[],
+	);
+
 	useEffectEffect(
 		Effect.gen(function* () {
 			yield* listen("SetLibrary", (event) => {
@@ -265,6 +271,7 @@ export function PhotoLibraryProvider({
 				setPhotoStack,
 				setStackPrimary,
 				clearPhotoStack,
+				getFullResAttachment,
 			}}
 		>
 			{children}
