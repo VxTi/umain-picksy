@@ -34,12 +34,12 @@ function PhotoEditor() {
 
 	const handleSave = async () => {
 		for (const photo of editingPhotos) {
-			await saveImageConfig(photo.id, photo.config ?? []);
+			await saveImageConfig(photo.id, photo.config ?? {});
 		}
 		toast.info("Images saved successfully");
 	};
 
-	const onConfigChange = (config: PhotoConfig) => {
+	const onConfigChange = (config: any) => {
 		setEditingPhotos((prev) =>
 			prev.map((photo, i) =>
 				i === activeImageIndex ? { ...photo, config } : photo,
@@ -140,7 +140,7 @@ function PhotoEditor() {
 				</div>
 
 				<PhotoEditorSidebar
-					config={editingPhotos[activeImageIndex]?.config ?? []}
+					config={editingPhotos[activeImageIndex]?.config ?? {}}
 					onConfigChange={onConfigChange}
 				/>
 			</div>

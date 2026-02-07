@@ -41,7 +41,17 @@ export const FilterOption = Schema.Union(
 
 export type FilterOption = Schema.Schema.Type<typeof FilterOption>;
 
-export const PhotoConfig = Schema.Array(FilterOption);
+export const PhotoConfig = Schema.Struct({
+	filters: Schema.optional(Schema.Array(FilterOption)),
+	transform: Schema.optional(
+		Schema.Struct({
+			rotate: Schema.optional(Schema.Number),
+			scale: Schema.optional(Schema.Number),
+			skewX: Schema.optional(Schema.Number),
+			skewY: Schema.optional(Schema.Number),
+		}),
+	),
+});
 
 export const PhotoSchema = Schema.Struct({
 	base64: Schema.String,
@@ -50,7 +60,17 @@ export const PhotoSchema = Schema.Struct({
 	filename: Schema.String,
 	sync_status: Schema.optional(Schema.NullOr(Schema.String)),
 	author_peer_id: Schema.optional(Schema.NullOr(Schema.String)),
-	config: Schema.optional(Schema.NullOr(PhotoConfig)),
+	config: Schema.optional(
+		Schema.NullOr(
+			Schema.Union(
+				PhotoConfig,
+				Schema.transform(Schema.String, PhotoConfig, {
+					decode: (s) => JSON.parse(s),
+					encode: (c) => JSON.stringify(c),
+				}),
+			),
+		),
+	),
 	favorite: Schema.optional(Schema.Boolean),
 	stack_id: Schema.optional(Schema.NullOr(Schema.String)),
 	is_stack_primary: Schema.optional(Schema.Boolean),

@@ -15,8 +15,8 @@ export function PhotoComponent({
 	className,
 	...props
 }: ImageViewProps) {
-	const filter = Array.isArray(config)
-		? config
+	const filter = Array.isArray(config?.filters)
+		? config.filters
 				.map((opt) => {
 					switch (opt.type) {
 						case "brightness":
@@ -44,6 +44,21 @@ export function PhotoComponent({
 				.join(" ")
 		: "";
 
+	const transform = config?.transform
+		? [
+				config.transform.rotate !== undefined &&
+					`rotate(${config.transform.rotate}deg)`,
+				config.transform.scale !== undefined &&
+					`scale(${config.transform.scale})`,
+				config.transform.skewX !== undefined &&
+					`skewX(${config.transform.skewX}deg)`,
+				config.transform.skewY !== undefined &&
+					`skewY(${config.transform.skewY}deg)`,
+			]
+				.filter(Boolean)
+				.join(" ")
+		: "";
+
 	return (
 		<div
 			className={twMerge(
@@ -56,7 +71,7 @@ export function PhotoComponent({
 				src={src}
 				alt={alt}
 				className="size-3/4 object-contain block"
-				style={{ filter }}
+				style={{ filter, transform }}
 			/>
 		</div>
 	);
