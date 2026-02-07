@@ -2,7 +2,7 @@ import { usePhotoLibrary } from "@/backend/photo-library-context";
 import { Photo } from "@/backend/schemas";
 import { Button } from "@/components/ui/button";
 import { PhotoComponent } from "@/components/photo-component";
-import { XIcon, CheckCircle2Icon } from "lucide-react";
+import { XIcon, HeartIcon } from "lucide-react";
 import React, { useMemo } from "react";
 import { toast } from "sonner";
 import { twMerge } from "tailwind-merge";
@@ -93,67 +93,79 @@ export default function StackPreview({
 
 				<div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
 					<div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-						{openStackPhotos.map((photo) => {
-							const isPrimary = photo.id === openStackPrimaryId;
-							return (
-								<motion.div
-									key={photo.id}
-									whileHover={{ y: -4 }}
-									className={twMerge(
-										"group relative flex flex-col gap-3 rounded-xl p-3 transition-all duration-300",
-										isPrimary
-											? "bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background"
-											: "bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border",
-									)}
-								>
-									<div
-										className="relative aspect-[4/3] w-full overflow-hidden rounded-lg cursor-zoom-in"
-										onClick={() => onOpenFullScreen(photo)}
-									>
-										<motion.div
-											layoutId={`photo-${photo.id}`}
-											className="size-full"
-										>
-											<PhotoComponent
-												src={photo.base64}
-												alt={photo.filename}
-												config={photo.config ?? {}}
-												className="transition-transform duration-500 group-hover:scale-105"
-											/>
-										</motion.div>
-										{isPrimary && (
-											<div className="absolute top-2 right-2 bg-primary text-primary-foreground p-1 rounded-full shadow-lg">
-												<CheckCircle2Icon className="h-4 w-4" />
-											</div>
-										)}
-									</div>
-									<div className="flex flex-col gap-2">
-										<p
-											className="truncate text-sm font-medium px-1"
-											title={photo.filename}
-										>
-											{photo.filename}
-										</p>
-										<Button
-											size="sm"
-											variant={isPrimary ? "default" : "secondary"}
-											className={twMerge(
-												"w-full h-8 text-xs font-semibold rounded-lg transition-all",
-												!isPrimary && "opacity-0 group-hover:opacity-100",
-											)}
-											onClick={() =>
-												handleSetStackPrimary(openStackId, photo.id)
-											}
-										>
-											{isPrimary ? "Primary Image" : "Set as Primary"}
-										</Button>
-									</div>
-								</motion.div>
-							);
-						})}
+						{openStackPhotos.map((photo) => (
+							<StackPreviewItem
+								photo={photo}
+								isPrimary={photo.id === openStackPrimaryId}
+								handleSetStackPrimary={handleSetStackPrimary}
+								onOpenFullScreen={onOpenFullScreen}
+								openStackId={openStackId}
+							/>
+						))}
 					</div>
 				</div>
 			</motion.div>
 		</div>
+	);
+}
+
+function StackPreviewItem({
+	photo,
+	isPrimary,
+	onOpenFullScreen,
+	handleSetStackPrimary,
+	openStackId,
+}: {
+	photo: Photo;
+	isPrimary: boolean;
+	handleSetStackPrimary: (stackId: string, primaryId: string) => void;
+	onOpenFullScreen: (photo: Photo) => void;
+	openStackId: string;
+}) {
+	return (
+		<motion.div
+			key={`stack-${photo.id}`}
+			className={twMerge(
+				"group relative flex flex-col gap-3 rounded-xl p-3 transition-all duration-300",
+				isPrimary
+					? "bg-primary/5 ring-2 ring-primary ring-offset-2 ring-offset-background"
+					: "bg-muted/30 hover:bg-muted/50 border border-transparent hover:border-border",
+			)}
+		>
+			<div
+				className="relative aspect-4/3 w-full overflow-hidden rounded-lg cursor-zoom-in"
+				onClick={() => onOpenFullScreen(photo)}
+			>
+				<motion.div key={`stack-photo-${photo.id}`} className="size-full">
+					<PhotoComponent
+						src={photo.base64}
+						alt={photo.filename}
+						config={photo.config ?? {}}
+						className="transition-transform duration-500 group-hover:scale-105"
+					/>
+				</motion.div>
+				{isPrimary && (
+					<div className="absolute bg-red-500 top-2 right-2 text-primary-foreground p-1.5 rounded-full shadow-lg">
+						<HeartIcon className="size-4  fill-white" />
+					</div>
+				)}
+			</div>
+			<div className="flex flex-col gap-2">
+				<p className="truncate text-sm font-medium px-1" title={photo.filename}>
+					{photo.filename}
+				</p>
+				<Button
+					size="sm"
+					variant={isPrimary ? "default" : "secondary"}
+					className={twMerge(
+						"w-full h-8 text-xs font-semibold rounded-lg transition-all",
+						!isPrimary && "opacity-0 group-hover:opacity-100",
+					)}
+					onClick={() => handleSetStackPrimary(openStackId, photo.id)}
+				>
+					{isPrimary ? "Primary Image" : "Set as Primary"}
+				</Button>
+			</div>
+		</motion.div>
 	);
 }
