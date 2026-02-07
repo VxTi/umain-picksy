@@ -15,6 +15,7 @@ use commands::photo_library_commands::{
     add_photos_from_folder,
     save_photo_config,
     set_photo_favorite,
+    set_photos_favorite,
     set_photo_stack,
     set_stack_primary,
     clear_photo_stack,
@@ -53,6 +54,7 @@ pub fn run() {
             get_photos_from_library,
             save_photo_config,
             set_photo_favorite,
+            set_photos_favorite,
             set_photo_stack,
             set_stack_primary,
             clear_photo_stack

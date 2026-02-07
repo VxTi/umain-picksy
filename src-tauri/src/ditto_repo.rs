@@ -374,6 +374,24 @@ impl DittoRepository {
         Ok(())
     }
 
+    pub async fn update_photos_favorite(
+        &self,
+        ids: Vec<String>,
+        favorite: bool,
+    ) -> Result<(), String> {
+        let store = self.ditto.store();
+        for id in ids {
+            store
+                .execute_v2((
+                    format!("UPDATE {PHOTOS_COLLECTION} SET favorite = :favorite WHERE _id = :id"),
+                    serde_json::json!({ "favorite": favorite, "id": id }),
+                ))
+                .await
+                .map_err(|e| format!("Failed to update photo favorite: {e}"))?;
+        }
+        Ok(())
+    }
+
     pub async fn update_photo_stack(
         &self,
         photo_ids: Vec<String>,

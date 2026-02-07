@@ -420,6 +420,15 @@ pub async fn set_photo_favorite(
 }
 
 #[tauri::command]
+pub async fn set_photos_favorite(
+    repo: State<'_, DittoRepository>,
+    ids: Vec<String>,
+    favorite: bool,
+) -> Result<(), String> {
+    repo.update_photos_favorite(ids, favorite).await
+}
+
+#[tauri::command]
 pub async fn set_photo_stack(
     repo: State<'_, DittoRepository>,
     args: SetPhotoStackArgs,

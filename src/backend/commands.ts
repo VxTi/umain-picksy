@@ -32,6 +32,11 @@ const SetPhotoFavoriteArgsSchema = Schema.Struct({
 	favorite: Schema.Boolean,
 });
 
+const SetPhotosFavoriteArgsSchema = Schema.Struct({
+	ids: Schema.Array(Schema.String),
+	favorite: Schema.Boolean,
+});
+
 const SetPhotoStackArgsSchema = Schema.Struct({
 	args: Schema.Struct({
 		photoIds: Schema.Array(Schema.String),
@@ -61,6 +66,7 @@ export enum CommandType {
 	GET_PHOTOS_FROM_LIBRARY = "get_photos_from_library",
 	SAVE_PHOTO_CONFIG = "save_photo_config",
 	SET_PHOTO_FAVORITE = "set_photo_favorite",
+	SET_PHOTOS_FAVORITE = "set_photos_favorite",
 	SET_PHOTO_STACK = "set_photo_stack",
 	SET_STACK_PRIMARY = "set_stack_primary",
 	CLEAR_PHOTO_STACK = "clear_photo_stack",
@@ -94,6 +100,10 @@ export const CommandSchemas = {
 	},
 	[CommandType.SET_PHOTO_FAVORITE]: {
 		args: SetPhotoFavoriteArgsSchema,
+		result: EmptySchema,
+	},
+	[CommandType.SET_PHOTOS_FAVORITE]: {
+		args: SetPhotosFavoriteArgsSchema,
 		result: EmptySchema,
 	},
 	[CommandType.SET_PHOTO_STACK]: {

@@ -1,5 +1,5 @@
 import { usePhotoLibrary } from "@/backend/photo-library-context";
-import { ButtonWithTooltip } from "@/components/ui/button-with-tooltip";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -8,24 +8,17 @@ import {
 	ImagesIcon,
 	Trash2Icon,
 } from "lucide-react";
-import { SetLibraryResult } from "./backend/events";
 import { openGalleryWindow } from "@/lib/windows";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
-type PicksyViewProps = {
-	photos: SetLibraryResult["photos"];
-	onSelectFolder: () => void;
-	onAddPhoto: () => void;
-	onClearLibrary: () => void;
-};
-
-export default function PicksyView({
-	photos,
-	onSelectFolder,
-	onAddPhoto,
-	onClearLibrary,
-}: PicksyViewProps) {
-	const { loading } = usePhotoLibrary();
+export default function PicksyView() {
+	const {
+		addPhotosToLibrary,
+		loading,
+		addPhotosFromFolder,
+		clearLibrary,
+		photos,
+	} = usePhotoLibrary();
 	return (
 		<div
 			onMouseDown={() => getCurrentWindow().startDragging()}
@@ -45,45 +38,33 @@ export default function PicksyView({
 					</div>
 
 					<div className="flex flex-col gap-2 w-full">
-						<ButtonWithTooltip
-							size="lg"
-							className="w-full"
-							onClick={onAddPhoto}
-							tooltip="Add a new photo to the library"
-						>
+						<Button size="lg" className="w-full" onClick={addPhotosToLibrary}>
 							<ImagePlusIcon /> Add photo
-						</ButtonWithTooltip>
+						</Button>
 
-						<ButtonWithTooltip
-							size="lg"
-							className="w-full"
-							onClick={onSelectFolder}
-							tooltip="Select a folder to import photos from"
-						>
+						<Button size="lg" className="w-full" onClick={addPhotosFromFolder}>
 							<FolderIcon /> Select photo folder
-						</ButtonWithTooltip>
+						</Button>
 
-						<ButtonWithTooltip
+						<Button
 							size="lg"
 							variant="outline"
 							className="w-full"
 							onClick={() => openGalleryWindow(photos)}
-							tooltip="Open the gallery to view all photos"
 						>
 							<ImagesIcon />
 							View Library
-						</ButtonWithTooltip>
+						</Button>
 
-						<ButtonWithTooltip
+						<Button
 							size="lg"
 							variant="destructive"
 							className="w-full"
-							onClick={onClearLibrary}
-							tooltip="Remove all photos from the library"
+							onClick={clearLibrary}
 						>
 							<Trash2Icon />
 							Clear library
-						</ButtonWithTooltip>
+						</Button>
 					</div>
 
 					<p className="text-xs text-muted-foreground">

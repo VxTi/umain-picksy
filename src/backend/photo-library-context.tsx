@@ -29,6 +29,10 @@ export interface PhotoLibraryContextType {
 		id: string,
 		favorite: boolean,
 	) => Promise<Record<string, never> | null>;
+	setPhotosFavorite: (
+		ids: string[],
+		favorite: boolean,
+	) => Promise<Record<string, never> | null>;
 	setPhotoStack: (
 		photoIds: string[],
 		stackId: string,
@@ -124,6 +128,22 @@ export function PhotoLibraryProvider({
 			).pipe(
 				Effect.zipRight(
 					invoke(CommandType.SET_PHOTO_FAVORITE, { id, favorite }),
+				),
+			),
+		[],
+	);
+
+	const setPhotosFavorite = useCallbackEffect(
+		(ids: string[], favorite: boolean) =>
+			Effect.sync(() =>
+				setPhotos((prev) =>
+					prev.map((photo) =>
+						ids.includes(photo.id) ? { ...photo, favorite } : photo,
+					),
+				),
+			).pipe(
+				Effect.zipRight(
+					invoke(CommandType.SET_PHOTOS_FAVORITE, { ids, favorite }),
 				),
 			),
 		[],
@@ -236,6 +256,7 @@ export function PhotoLibraryProvider({
 				clearLibrary,
 				saveImageConfig,
 				setPhotoFavorite,
+				setPhotosFavorite,
 				setPhotoStack,
 				setStackPrimary,
 				clearPhotoStack,

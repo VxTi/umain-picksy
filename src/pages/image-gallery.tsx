@@ -5,7 +5,13 @@ import { PhotoComponent } from "@/pages/photo-component";
 import { listen } from "@tauri-apps/api/event";
 import { openEditWindow } from "@/lib/windows";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { HeartIcon, PencilIcon, Trash2Icon, XIcon } from "lucide-react";
+import {
+	HeartIcon,
+	LayersIcon,
+	PencilIcon,
+	Trash2Icon,
+	XIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Dispatch, MouseEvent, SetStateAction } from "react";
 import { Button } from "@/components/ui/button";
@@ -341,21 +347,22 @@ export default function ImageGallery() {
 						Loading photos...
 					</p>
 				)}
-
-				<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-					{displayPhotos.map((image) => (
-						<AlbumPhoto
-							key={image.id}
-							image={image}
-							selectedImages={selectedImages}
-							setSelectedImages={setSelectedImages}
-							onOpenFullScreen={setFullScreenPhoto}
-							activePhotoId={activePhotoId}
-							setActivePhotoId={setActivePhotoId}
-							stackPhotos={stackGroups.get(image.stack_id ?? "") ?? []}
-							onOpenStack={setOpenStackId}
-						/>
-					))}
+				<div className="px-2">
+					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+						{displayPhotos.map((image) => (
+							<AlbumPhoto
+								key={image.id}
+								image={image}
+								selectedImages={selectedImages}
+								setSelectedImages={setSelectedImages}
+								onOpenFullScreen={setFullScreenPhoto}
+								activePhotoId={activePhotoId}
+								setActivePhotoId={setActivePhotoId}
+								stackPhotos={stackGroups.get(image.stack_id ?? "") ?? []}
+								onOpenStack={setOpenStackId}
+							/>
+						))}
+					</div>
 				</div>
 			</div>
 			{fullScreenPhoto && (
@@ -498,7 +505,8 @@ function GalleryNavigationBar({
 	autoStackingEnabled: boolean;
 	onToggleAutoStacking: (enabled: boolean) => void;
 }) {
-	const { photos, removePhotoFromLibrary, setPhotos } = usePhotoLibrary();
+	const { photos, removePhotoFromLibrary, setPhotos, setPhotosFavorite } =
+		usePhotoLibrary();
 
 	const [presence, setPresence] = useState<PresencePayload | null>(null);
 	const [showPeers, setShowPeers] = useState(false);
@@ -522,6 +530,26 @@ function GalleryNavigationBar({
 	const handleEditClick = () => {
 		if (selectedImages.length > 0) {
 			void openEditWindow(selectedImages);
+		}
+	};
+
+	const isAnyNotFavorited = selectedImages.some((img) => !img.favorite);
+	const allFavorited =
+		selectedImages.length > 0 && selectedImages.every((img) => img.favorite);
+
+	const handleFavoriteClick = async () => {
+		if (selectedImages.length === 0) return;
+
+		const targetState = isAnyNotFavorited;
+		try {
+			await setPhotosFavorite(
+				selectedImages.map((img) => img.id),
+				targetState,
+			);
+		} catch (error) {
+			toast.error(
+				`Failed to ${targetState ? "favorite" : "unfavorite"} images.`,
+			);
 		}
 	};
 
@@ -577,7 +605,7 @@ function GalleryNavigationBar({
 					authorFilter={authorFilter}
 					setAuthorFilter={setAuthorFilter}
 				/>
-				<ButtonWithTooltip
+				<Button
 					variant="outline"
 					onMouseEnter={() => setShowPeers(true)}
 					onMouseLeave={() => {
@@ -592,12 +620,13 @@ function GalleryNavigationBar({
 							return next;
 						});
 					}}
-					tooltip="View online peers"
 				>
 					<span
 						className={twMerge(
 							"inline-block h-2 w-2 rounded-full",
-							onlineCount > 0 ? "bg-emerald-500" : "bg-red-500",
+							onlineCount > 0
+								? "bg-emerald-500 ring-0 transition-all duration-200 "
+								: "bg-red-500",
 						)}
 					/>
 					<span
@@ -608,21 +637,7 @@ function GalleryNavigationBar({
 					>
 						{onlineLabel}
 					</span>
-				</ButtonWithTooltip>
-				{selectedImages.length > 0 && (
-					<ButtonWithTooltip
-						variant="destructive"
-						onClick={handleDeleteClick}
-						disabled={selectedImages.length === 0}
-						tooltip="Delete selected images"
-					>
-						<Trash2Icon />
-						Delete{" "}
-						{selectedImages.length === 1
-							? "image"
-							: `${selectedImages.length} images`}
-					</ButtonWithTooltip>
-				)}
+				</Button>
 				{showStackAction && (
 					<Button variant="outline" onClick={onCreateStack}>
 						{stackActionLabel}
@@ -644,11 +659,22 @@ function GalleryNavigationBar({
 					<ButtonWithTooltip
 						variant="ghost"
 						size="icon-sm"
-						className="text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10"
-						tooltip="Add to favorites"
+						onClick={handleFavoriteClick}
+						disabled={selectedImages.length === 0}
+						className={twMerge(
+							"text-muted-foreground hover:bg-yellow-500/10",
+							allFavorited
+								? "text-yellow-500 hover:text-yellow-600"
+								: "hover:text-yellow-500",
+						)}
+						tooltip={
+							isAnyNotFavorited ? "Add to favorites" : "Remove from favorites"
+						}
 						onMouseDown={(e) => e.stopPropagation()}
 					>
-						<HeartIcon className="size-4" />
+						<HeartIcon
+							className={twMerge("size-4", allFavorited && "fill-current")}
+						/>
 					</ButtonWithTooltip>
 					<ButtonWithTooltip
 						variant="ghost"
@@ -835,7 +861,7 @@ function AlbumPhoto({
 				src={image.base64}
 				alt={image.filename}
 				config={image.config ?? {}}
-				className="shadow-sm shadow-black"
+				className="shadow-sm shadow-black h-60"
 			/>
 			<div className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black/70 to-transparent p-2">
 				<p className="text-white text-sm font-medium">{image.filename}</p>
@@ -870,17 +896,18 @@ function AlbumPhoto({
 				</div>
 			)}
 			{image.stack_id && stackSize > 1 && (
-				<Button
+				<button
 					type="button"
 					onClick={(event) => {
 						event.preventDefault();
 						event.stopPropagation();
 						onOpenStack(image.stack_id ?? "");
 					}}
-					className="absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5! py-0.5! text-xs text-white"
+					className="flex items-center gap-1 absolute bottom-2 left-2 rounded-md bg-black/60 px-1.5! py-1! text-white"
 				>
-					Stack ({stackSize})
-				</Button>
+					<LayersIcon className="size-4" />
+					<span className="text-xs">Stack ({stackSize})</span>
+				</button>
 			)}
 		</div>
 	);
