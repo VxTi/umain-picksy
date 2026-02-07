@@ -12,6 +12,7 @@ Checking for /Users/hbanken/Projects/Q42/umain-picksy/libdittoffi.a
 Checking for /Users/hbanken/Projects/Q42/umain-picksy/src-tauri/target/aarch64-linux-android/debug/libdittoffi.a
 Checking for /Users/hbanken/Projects/Q42/umain-picksy/src-tauri/target/aarch64-linux-android/debug/deps/libdittoffi.a
 Checking for /Users/hbanken/Projects/Q42/umain-picksy/src-tauri/target/aarch64-linux-android/debug/build/dittolive-ditto-sys-6b8b9b3b81cd7d68/out/libdittoffi.a
+https://software.ditto.live/rust/Ditto/4.13.3/aarch64-apple-ios/release/libdittoffi.a
 curl: (56) The requested URL returned error: 404
 
 thread 'main' panicked at /Users/hbanken/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/dittolive-ditto-sys-4.13.3/build.rs:360:17:

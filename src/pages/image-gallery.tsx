@@ -214,18 +214,27 @@ export default function ImageGallery() {
 		setFullScreenSrc(null);
 
 		if (!fullScreenPhoto.full_res_attachment) {
+			console.log("no full res attachment for", fullScreenPhoto.id);
 			return () => {
 				cancelled = true;
 			};
 		}
 
+		console.log("fetching full res attachment for", fullScreenPhoto.id);
 		void getFullResAttachment(fullScreenPhoto.id)
 			.then((src) => {
 				if (!cancelled && src) {
+					console.log("full res attachment set for", fullScreenPhoto.id, src);
 					setFullScreenSrc(src);
 				}
 			})
-			.catch(() => {});
+			.catch((err) => {
+				console.error(
+					"error fetching full res attachment for",
+					fullScreenPhoto.id,
+					err,
+				);
+			});
 
 		return () => {
 			cancelled = true;

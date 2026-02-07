@@ -45,11 +45,19 @@ function PhotoEditor() {
 		const fetchAll = async () => {
 			for (const photo of pending) {
 				try {
+					console.log("fetching full res attachment for", photo.id);
 					const src = await getFullResAttachment(photo.id);
+					console.log("full res attachment fetched for", photo.id, src);
 					if (!cancelled && src) {
 						setFullResById((prev) => ({ ...prev, [photo.id]: src }));
+						console.log("full res attachment set for", photo.id, src);
 					}
-				} catch {
+				} catch (err) {
+					console.error(
+						"error fetching full res attachment for",
+						photo.id,
+						err,
+					);
 					// Ignore fetch errors, fallback stays on thumbnail
 				}
 			}
