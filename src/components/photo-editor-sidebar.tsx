@@ -24,7 +24,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { useState, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDrag, useDrop } from "react-dnd";
@@ -326,7 +326,7 @@ export default function PhotoEditorSidebar({ config, onConfigChange }: Props) {
 						<div className="flex items-center justify-between">
 							<h3 className="text-lg font-semibold">Filters</h3>
 							<Select onValueChange={(value) => addFilter(value as any)}>
-								<SelectTrigger className="w-[120px]">
+								<SelectTrigger className="min-w-30">
 									<PlusIcon className="mr-2 h-4 w-4" />
 									<SelectValue placeholder="Add" />
 								</SelectTrigger>

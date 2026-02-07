@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { PhotoConfig, PhotoSchema } from "./schemas";
+import { PhotoSchema } from "./schemas";
 
 /** Ensures every command has both args and result schemas. */
 type CommandEntry = {

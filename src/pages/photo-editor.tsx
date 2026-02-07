@@ -120,9 +120,9 @@ function PhotoEditor() {
 								onClick={() => setActiveImageIndex(i)}
 								className={twMerge(
 									"transition-all duration-300",
-									editingPhotos.length > 1 && activeImageIndex === i
-										? "opacity-100 scale-100"
-										: "opacity-50 scale-90",
+									editingPhotos.length > 1 && activeImageIndex !== i
+										? "opacity-50 scale-90"
+										: "opacity-100 scale-100"
 								)}
 							/>
 							{editingPhotos.length > 1 && (
